@@ -1,0 +1,83 @@
+,Seine-Sud-Est // Code Girouette,,
+,Code,Ville,Destination
+HLP,61,,Sans Voyageur
+,65,,Retour Dépôt
+,66,,Vide
+134,134BR,CHAILLOT-BATIGNOLLES,Gare RER
+,134GBB,DAMPIERRE,Groupe Scolaire Bergmann (depuis Chaillot-Batignolles)
+,134BH,DAMPIERRE,Henri Barbusse (depuis Chaillot-Batignolles)
+,134VE,ARLANDE,Valmy - Europe (depuis Chaillot-Batignolles)
+,134HD,ARLANDE,Les Hauts d'Arlande (depuis Chaillot-Batignolles)
+,134AP,ARLANDE,Sous-Préfecture - Champagne
+,134DG,DAMPIERRE,Grenelle (depuis Brévannes-Aux-Roses)
+,134GBA,DAMPIERRE,Groupe Scolaire Bergmann (depuis Brévannes-Aux-Roses)
+,134GA,CHAILLOT-BATIGNOLLES,Général de Gaulle (depuis Brévannes-Aux-Roses)
+135,135BR,CHAILLOT-BATIGNOLLES,Gare RER
+,135NRS,NARBÉRALE,Gare RER (depuis Chaillot-Batignolles)
+,135LV,BERTHÉE,La Vallée (depuis Chaillot-Batignolles)
+,135CUS,CRAMAIN,Université RER (depuis Chaillot-Batignolles)
+,135BPS,BERTHÉE,Berthéopôle (depuis Chaillot-Batignolles)
+,135BCS,BERTHÉE,Bismarck - Courboules 
+,135BPB,BERTHÉE,Berthéopôle (depuis Bonneuil-sur-Marne)
+,135CUB,CRAMAIN,Université RER (depuis Bonneuil-sur-Marne)
+,135BN,BERTHÉE,Boulevard National - Mac Mahon (depuis Bonneuil-sur-Marne)
+,135NRB,NARBÉRALE,Gare RER (depuis Bonneuil-sur-Marne)
+142,142BR,CHAILLOT-BATIGNOLLES,Gare RER
+,142QV,CHAILLOT-BATIGNOLLES,Voltaire (depuis Chaillot-Batignolles)
+,142NPN,NARBÉRALE,Pont de Narbérale (depuis Chaillot-Batignolles)
+,142LG,NARBÉRALE,Labille-Guiard (depuis Chaillot-Batignolles)
+,142PR,PORT-PERRET,Village
+,142LC,NARBÉRALE,Les Clamarts (depuis Noailles-le-Pont)
+,142NPB,NARBÉRALE,Pont de Narbérale (depuis Noailles-le-Pont)
+,142CH,NARBÉRALE,Rue de Cherbourg (depuis Noailles-le-Pont)
+149,149BR,CHAILLOT-BATIGNOLLES,Gare RER
+,149AR,LE PETIT-PASSY,Allée Royale (depuis Chaillot-Batignolles)
+,149DH,LE PETIT-PASSY,Pasteur
+,149RB,LE PETIT-PASSY,Rue de Bréon (depuis Le Petit-Passy)
+,149DG,CHAILLOT-BATIGNOLLES,Général de Gaulle (depuis Le Petit-Passy)
+233,233NR,NARBÉRALE,Gare RER
+,233MB,CHAILLOT-BATIGNOLLES,Maurice Barrès (depuis Narbérale)
+,233CB,CHAILLOT-BATIGNOLLES,Hôtel de Ville
+242,242CU,CRAMAIN,Université RER
+,242PG,CRAMAIN,Maurice Barrès (depuis Narbérale)
+,242PR,PORT-PERRET,Village
+,242CLT,CRAMAIN,Maurice Barrès (depuis Narbérale)
+,242LW,CRAMAIN,Maurice Barrès (depuis Narbérale)
+257,257BR,BERTHÉE,Rosenberg
+,257BM,BERTHÉE,Boulevard National - Mac Mahon (depuis Berthée)
+,257RC,NARBÉRALE,Résistance - Joliot-Curie (depuis Berthée)
+,257PZA,NARBÉRALE,Pont d'Austerlitz (depuis Berthée)
+,257JBA,ARLANDE,Jules Bobillot (depuis Berthée)
+,257HA,ARLANDE,Les Hauts d'Arlande
+,257JBB,ARLANDE,Jules Bobillot (depuis Arlande)
+,257PZB,NARBÉRALE,Pont d'Austerlitz (depuis Arlande)
+,257RN,NARBÉRALE,Résistance - Sadi Carnot (depuis Arlande)
+,257FE,BERTHÉE,Fédération (depuis Arlande)
+,257CU,CRAMAIN,Université RER (depuis Arlande)
+315,315BR,CHAILLOT-BATIGNOLLES,Gare RER
+,315LYC,CHAILLOT-BATIGNOLLES,Lycée Christophe Colomb (depuis Chaillot-Batignolles)
+,315CG,CHAILLOT-BATIGNOLLES,Houssaye de Gaulle
+,315AM,CHAILLOT-BATIGNOLLES,Général de Maud'Huy (depuis Bréon)
+,315ES,CHAILLOT-BATIGNOLLES,Estivallière (depuis Bréon)
+316,316DMC,DENFERT-LA-ROCHE,Hôtel de Ville
+,316PN,BERTHÉE,Place Nationale (depuis Calvire-et-Cuire)
+,316CUN,CRAMAIN,Université RER (depuis Calvire-et-Cuire)
+,316HC,CRAMAIN,Hôtel de Ville (depuis Calvire-et-Cuire)
+,316MN,NARBÉRALE,Mairie (depuis Calvire-et-Cuire)
+,316NC,NARBÉRALE,Rue de Cherbourg
+,316CJ,NARBÉRALE,Place Nationale (depuis Dampierre)
+,316CUC,CRAMAIN,Université RER (depuis Dampierre)
+,316PY,CRAMAIN,Pyrénées (depuis Dampierre)
+433,433NG,NARBÉRALE,Gare RER
+,433RJC,NARBÉRALE,Résistance Joliot-Curie (depuis Narbérale)
+,433CLZ,CRAMAIN,Clémenceau
+,433RL,NARBÉRALE,Résistance Lénine (depuis Sarazel)
+N72,787BRC,CHAILLOT-BATIGNOLLES,Gare RER
+,787CHA,NARBÉRALE,Rue de Cherbourg (depuis Calvire-et-Cuire)
+,787LB,NARBÉRALE,Labille-Guiard (depuis Calvire-et-Cuire)
+,787PS,ARLANDE,Sous-Préfecture - Champagne
+,787CHC,NARBÉRALE,Rue de Cherbourg (depuis Arlande)
+N76,786BRP,CHAILLOT-BATIGNOLLES,Gare RER
+,786GNB,NARBÉRALE,Gare RER (depuis Boissy-Saint-Léger)
+,786RB,BERTHÉE,Rosenberg
+,786GNP,NARBÉRALE,Gare RER (depuis Le Plessin-Mendinel)

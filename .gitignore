@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+.vscode
+.yarn
+public/badges
+.directory
+github_readme.md

@@ -1,0 +1,183 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: drivers
+    // Document ID: {driverId} (Discord ID or unique user ID string)
+    // Fields:
+    //   - id: string (required, 1-64 chars, matches document ID, immutable on update)
+    //   - username: string (required, 1-32 chars)
+    //   - avatarUrl: string (optional, 0-500 chars)
+    //   - joinedAt: string or timestamp (required, 1-50 chars or timestamp, immutable on update)
+    //   - tripsCompleted: number (required, integer >= 0, monotonic on update)
+    //   - totalMinutesDriven: number (required, integer >= 0, monotonic on update)
+    //   - totalStopsCompleted: number (required, integer >= 0, monotonic on update)
+    //   - onTimeCount: number (required, integer >= 0, monotonic on update)
+    //   - rankTitle: string (required, 1-50 chars)
+    //   - updatedAt: timestamp or string (required, 1-50 chars or timestamp)
+    //
+    // Collection: services
+    // Document ID: {serviceId} (auto-generated ID)
+    // Fields:
+    //   - driverId: string (required, 1-64 chars)
+    //   - driverName: string (required, 1-64 chars)
+    //   - lineName: string (required, 1-64 chars)
+    //   - lineId: string (optional, 1-64 chars)
+    //   - directionCode: string (required, 1-64 chars)
+    //   - origin: string (required, 1-100 chars)
+    //   - destination: string (required, 1-100 chars)
+    //   - departureTime: string (required, 1-30 chars)
+    //   - delayMinutes: number (required, integer or float, -120 to 1440)
+    //   - stopsCount: number (required, integer >= 0 and <= 1000)
+    //   - date: string or timestamp (required, 1-50 chars or timestamp)
+    //   - createdAt: timestamp or string (optional, 1-50 chars or timestamp)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidDriver(data, driverId) {
+      return hasRequiredFields([
+               'id', 'username', 'joinedAt', 'tripsCompleted',
+               'totalMinutesDriven', 'totalStopsCompleted', 'onTimeCount',
+               'rankTitle', 'updatedAt'
+             ]) &&
+             hasOnlyAllowedFields([
+               'id', 'username', 'avatarUrl', 'joinedAt', 'tripsCompleted',
+               'totalMinutesDriven', 'totalStopsCompleted', 'onTimeCount',
+               'rankTitle', 'updatedAt'
+             ]) &&
+             data.id is string &&
+             data.id == driverId &&
+             data.id.size() >= 1 &&
+             data.id.size() <= 64 &&
+             data.username is string &&
+             data.username.size() >= 1 &&
+             data.username.size() <= 32 &&
+             (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 500)) &&
+             (data.joinedAt is timestamp || (data.joinedAt is string && data.joinedAt.size() >= 1 && data.joinedAt.size() <= 50)) &&
+             (data.tripsCompleted is int || data.tripsCompleted is number) &&
+             data.tripsCompleted >= 0 &&
+             (data.totalMinutesDriven is int || data.totalMinutesDriven is number) &&
+             data.totalMinutesDriven >= 0 &&
+             (data.totalStopsCompleted is int || data.totalStopsCompleted is number) &&
+             data.totalStopsCompleted >= 0 &&
+             (data.onTimeCount is int || data.onTimeCount is number) &&
+             data.onTimeCount >= 0 &&
+             data.rankTitle is string &&
+             data.rankTitle.size() >= 1 &&
+             data.rankTitle.size() <= 50 &&
+             (data.updatedAt is timestamp || (data.updatedAt is string && data.updatedAt.size() >= 1 && data.updatedAt.size() <= 50));
+    }
+
+    function isDriverUpdateValid() {
+      return request.resource.data.id == resource.data.id &&
+             (!('joinedAt' in resource.data) || request.resource.data.joinedAt == resource.data.joinedAt) &&
+             (!('tripsCompleted' in resource.data) || request.resource.data.tripsCompleted >= resource.data.tripsCompleted) &&
+             (!('totalMinutesDriven' in resource.data) || request.resource.data.totalMinutesDriven >= resource.data.totalMinutesDriven) &&
+             (!('totalStopsCompleted' in resource.data) || request.resource.data.totalStopsCompleted >= resource.data.totalStopsCompleted) &&
+             (!('onTimeCount' in resource.data) || request.resource.data.onTimeCount >= resource.data.onTimeCount);
+    }
+
+    function isValidService(data) {
+      return hasRequiredFields([
+               'driverId', 'driverName', 'lineName', 'directionCode',
+               'origin', 'destination', 'departureTime', 'delayMinutes',
+               'stopsCount', 'date'
+             ]) &&
+             hasOnlyAllowedFields([
+               'driverId', 'driverName', 'lineName', 'lineId', 'directionCode',
+               'origin', 'destination', 'departureTime', 'delayMinutes',
+               'stopsCount', 'date', 'createdAt'
+             ]) &&
+             data.driverId is string &&
+             data.driverId.size() >= 1 &&
+             data.driverId.size() <= 64 &&
+             data.driverName is string &&
+             data.driverName.size() >= 1 &&
+             data.driverName.size() <= 64 &&
+             data.lineName is string &&
+             data.lineName.size() >= 1 &&
+             data.lineName.size() <= 64 &&
+             (!('lineId' in data) || (data.lineId is string && data.lineId.size() <= 64)) &&
+             data.directionCode is string &&
+             data.directionCode.size() >= 1 &&
+             data.directionCode.size() <= 64 &&
+             data.origin is string &&
+             data.origin.size() >= 1 &&
+             data.origin.size() <= 100 &&
+             data.destination is string &&
+             data.destination.size() >= 1 &&
+             data.destination.size() <= 100 &&
+             data.departureTime is string &&
+             data.departureTime.size() >= 1 &&
+             data.departureTime.size() <= 30 &&
+             (data.delayMinutes is int || data.delayMinutes is number) &&
+             data.delayMinutes >= -120 &&
+             data.delayMinutes <= 1440 &&
+             (data.stopsCount is int || data.stopsCount is number) &&
+             data.stopsCount >= 0 &&
+             data.stopsCount <= 1000 &&
+             (data.date is timestamp || (data.date is string && data.date.size() >= 1 && data.date.size() <= 50)) &&
+             (!('createdAt' in data) || data.createdAt is timestamp || (data.createdAt is string && data.createdAt.size() <= 50));
+    }
+
+    // ===============================================================
+    // Root Default Deny
+    // ===============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===============================================================
+    // Drivers Collection Rules
+    // ===============================================================
+    match /drivers/{driverId} {
+      // Allow read so anyone can view driver ranks, leaderboards, and statistics
+      allow read: if true;
+
+      // Allow write if authenticated or valid driver profile conforming to schema
+      allow create: if isValidDriver(request.resource.data, driverId);
+      allow update: if isValidDriver(request.resource.data, driverId) && isDriverUpdateValid();
+      allow delete: if false;
+    }
+
+    // ===============================================================
+    // Services Collection Rules
+    // ===============================================================
+    match /services/{serviceId} {
+      // Allow read for bus service history
+      allow read: if true;
+
+      // Allow create for valid completed bus service records
+      allow create: if isValidService(request.resource.data);
+
+      // Historical records are append-only: updates and deletes are forbidden
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

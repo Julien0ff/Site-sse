@@ -1,0 +1,122 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#080226] text-white antialiased selection:bg-[#DAE44E]/30 selection:text-[#DAE44E];
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(12, 4, 56, 0.6);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(218, 228, 78, 0.25);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(218, 228, 78, 0.5);
+}
+
+@keyframes slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up-fade 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out forwards;
+}
+
+/* Animation de rouleau mécanique pour chaque chiffre du compteur */
+@keyframes digit-roll-in {
+  0% {
+    transform: translateY(75%) scale(0.92);
+    opacity: 0;
+    filter: blur(1px);
+  }
+  65% {
+    transform: translateY(-4%) scale(1.01);
+    opacity: 1;
+    filter: blur(0px);
+  }
+  100% {
+    transform: translateY(0%) scale(1);
+    opacity: 1;
+    filter: blur(0px);
+  }
+}
+
+.animate-digit-roll {
+  display: inline-block;
+  animation: digit-roll-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Animation du Prochain Arrêt lors du changement d'arrêt */
+@keyframes stop-change-main {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+    filter: brightness(1.35);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.01);
+    filter: brightness(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: brightness(1);
+  }
+}
+
+.animate-stop-change {
+  animation: stop-change-main 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Animation des 2 Arrêts Suivants lors du changement d'arrêt */
+@keyframes upcoming-stop-slide {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) translateX(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-upcoming-stop {
+  animation: upcoming-stop-slide 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
