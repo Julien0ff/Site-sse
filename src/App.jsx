@@ -147,8 +147,10 @@ export default function App() {
     const targetLine = busData.lines.find(l => l.name === lineName);
     if (!targetLine) return;
     const targetDir = targetLine.directions.find(d => d.dirId === dirId) || targetLine.directions[0];
-    
+    const targetSheet = busData.sheets?.[targetDir.sheetKey];
+
     setSelectedDirection(targetDir);
+    setSelectedSpawnStop(targetSheet?.fullOrigin || '');
     setDepartureTime(depTime);
     setCurrentStopIndex(0);
     setDelayMinutes(0);
@@ -250,7 +252,7 @@ export default function App() {
       let effectiveDepTime = t.departureTime;
       let effectiveOrig = t.originStop;
 
-      if (selectedSpawnStop && selectedSpawnStop !== t.originStop) {
+      if (selectedSpawnStop && selectedSpawnStop !== activeSheet?.fullOrigin && selectedSpawnStop !== t.originStop) {
         const spawnIdx = t.stops.findIndex(s => s.stop.toLowerCase() === selectedSpawnStop.toLowerCase());
         // Ignorer les courses partielles qui ne passent pas par ce spawn ou qui y terminent
         if (spawnIdx < 0 || spawnIdx >= t.stops.length - 1 || !t.stops[spawnIdx].time) {
@@ -280,7 +282,7 @@ export default function App() {
       });
     }
     return mapped;
-  }, [rawTrips, selectedSpawnStop]);
+  }, [rawTrips, selectedSpawnStop, activeSheet]);
 
   // Départs filtrés (Complets vs Limités)
   const filteredTrips = useMemo(() => {
@@ -335,7 +337,7 @@ export default function App() {
     let diff = totalDepSec - nowSec;
 
     // Si l'horaire choisi est au lendemain matin (ex: il est 23h30 et départ à 06h00)
-    if (diff < -1800) diff += 86400;
+    if (diff < -43200) diff += 86400;
 
     const isPast = diff <= 0;
     const abs = Math.abs(diff);
@@ -385,7 +387,7 @@ export default function App() {
     const nowSec = effectiveClock.getHours() * 3600 + effectiveClock.getMinutes() * 60 + effectiveClock.getSeconds();
     let diff = targetSec - nowSec;
 
-    if (diff < -1800) diff += 86400;
+    if (diff < -43200) diff += 86400;
 
     if (diff <= 10 && diff >= -45) {
       return { text: "À L'ARRÊT", status: "arret" };
@@ -419,7 +421,7 @@ export default function App() {
     const targetSec = h * 3600 + m * 60 + delayMinutes * 60;
     const nowSec = effectiveClock.getHours() * 3600 + effectiveClock.getMinutes() * 60 + effectiveClock.getSeconds();
     let diffSec = targetSec - nowSec;
-    if (diffSec < -1800) diffSec += 86400;
+    if (diffSec < -43200) diffSec += 86400;
     const diffMin = Math.round(diffSec / 60);
     if (diffMin <= 0) return "Imminent";
     if (diffMin >= 60) {
@@ -435,6 +437,23 @@ export default function App() {
     if (!activeTripStops.length) return null;
     return activeTripStops[1] || activeTripStops[0];
   }, [activeTripStops]);
+
+  // Raccourcis clavier (Flèche Droite / Gauche) au pupitre en conduite
+  useEffect(() => {
+    if (appMode !== 'conducteur' || step !== 'service' || serviceTab !== 'conduite' || !isInService) return;
+    const handleKeyDown = (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target?.tagName)) return;
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setCurrentStopIndex(prev => Math.min(activeTripStops.length - 1, prev + 1));
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setCurrentStopIndex(prev => Math.max(0, prev - 1));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [appMode, step, serviceTab, isInService, activeTripStops.length]);
 
   // Les 2 arrêts suivants (en conduite ou au terminus)
   const upcomingStops = useMemo(() => {
@@ -472,14 +491,21 @@ export default function App() {
 
   // Validation et clôture de service conducteur
   const handleFinishService = () => {
+    const depT = selectedTrip?.effectiveDepartureTime || departureTime;
+    const arrT = selectedTrip?.arrivalTime || '';
     const servicePayload = {
-      lineName: activeLine?.name || selectedDirection?.lineId || 'Ligne',
+      lineName: activeLine?.name || 'Ligne',
       lineId: activeLine?.lineId,
+      logoUrl: activeLine?.logoUrl,
+      code: selectedDirection?.code,
       directionCode: selectedDirection?.code,
-      origin: selectedTrip?.effectiveOrigin || selectedDirection?.origin,
+      origin: selectedTrip?.effectiveOriginStop || selectedDirection?.origin,
       destination: selectedTrip?.destinationStop || selectedDirection?.destination,
-      departureTime: selectedTrip?.effectiveDepartureTime || departureTime,
+      departureTime: depT,
+      arrivalTime: arrT,
+      durationMinutes: selectedTrip?.effectiveDurationMinutes || 20,
       delayMinutes: delayMinutes,
+      stopCount: activeTripStops?.length || 0,
       stopsCount: activeTripStops?.length || 0,
       driverId: user?.id || 'guest',
       driverName: user?.username || 'Conducteur',
@@ -494,11 +520,8 @@ export default function App() {
 
     // Cochage automatique de l'étape correspondante sur la feuille de route active
     if (activeRoster && activeRoster.steps?.length) {
-      const targetStep = activeRoster.steps.find(s =>
-        activeRosterStep
-          ? s.stepNumber === activeRosterStep
-          : (!s.isCompleted && (s.dirId === selectedDirection?.dirId || s.lineName === activeLine?.name))
-      );
+      const launched = activeRoster.steps.find(s => s.stepNumber === activeRosterStep && s.dirId === selectedDirection?.dirId);
+      const targetStep = launched || activeRoster.steps.find(s => !s.isCompleted && s.dirId === selectedDirection?.dirId);
 
       if (targetStep && !targetStep.isCompleted) {
         const now = Date.now();
@@ -1182,18 +1205,26 @@ export default function App() {
                   </div>
                 ) : (
                   /* EN SERVICE : PROCHAIN ARRÊT ACTIF */
-                  <div className="bg-[#100A38] border border-white/10 rounded-3xl p-5 lg:p-6 shadow-2xl space-y-5">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                      <span className="text-[10px] font-mono font-black uppercase text-[#DAE44E] flex items-center space-x-1.5">
-                        <span className="relative flex h-2.5 w-2.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#DAE44E] opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#DAE44E]"></span>
+                  <div className="bg-[#100A38] border border-white/10 rounded-3xl p-5 lg:p-6 shadow-2xl space-y-4">
+                    <div className="space-y-2 border-b border-white/5 pb-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono font-black uppercase text-[#DAE44E] flex items-center space-x-1.5">
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#DAE44E] opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#DAE44E]"></span>
+                          </span>
+                          <span>EN SERVICE</span>
                         </span>
-                        <span>EN SERVICE</span>
-                      </span>
-                      <span className="text-xs font-mono font-bold text-zinc-300">
-                        Arrêt {currentStopIndex + 1} sur {activeTripStops.length}
-                      </span>
+                        <span className="text-xs font-mono font-bold text-zinc-300">
+                          Arrêt {currentStopIndex + 1} / {activeTripStops.length} ({activeTripStops.length > 0 ? Math.round(((currentStopIndex + 1) / activeTripStops.length) * 100) : 0}%)
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-black/50 rounded-full overflow-hidden border border-white/5">
+                        <div
+                          className="h-full bg-[#DAE44E] rounded-full transition-all duration-300"
+                          style={{ width: `${activeTripStops.length > 0 ? Math.round(((currentStopIndex + 1) / activeTripStops.length) * 100) : 0}%` }}
+                        />
+                      </div>
                     </div>
 
                     <div
@@ -1229,7 +1260,7 @@ export default function App() {
                         onClick={() => setCurrentStopIndex(prev => Math.max(0, prev - 1))}
                         disabled={currentStopIndex === 0}
                         className="bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white p-4 rounded-2xl border border-white/10 active:scale-95 transition-all"
-                        title="Arrêt précédent"
+                        title="Arrêt précédent (Flèche gauche)"
                       >
                         <ChevronLeft size={22} className="shrink-0" />
                       </button>
@@ -1253,6 +1284,7 @@ export default function App() {
                         <button
                           onClick={() => setCurrentStopIndex(prev => Math.min(activeTripStops.length - 1, prev + 1))}
                           className="flex-1 py-4 px-5 rounded-2xl font-black text-sm uppercase tracking-wider bg-[#DAE44E] hover:bg-[#E5EE60] text-[#080226] shadow-xl flex items-center justify-center space-x-2 active:scale-[0.98] transition-all"
+                          title="Arrêt suivant (Flèche droite)"
                         >
                           <Check size={20} className="shrink-0" />
                           <span>Valider Arrêt Suivant</span>
@@ -1270,16 +1302,38 @@ export default function App() {
                         {lastAutoCheckedStep && (
                           <div className="inline-flex items-center space-x-1.5 bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-mono font-bold px-3 py-1 rounded-full animate-check-bounce">
                             <Check size={14} />
-                            <span>Étape #{lastAutoCheckedStep} cochée automatiquement sur votre feuille de route !</span>
+                            <span>Course #{lastAutoCheckedStep} cochée sur votre feuille de route</span>
                           </div>
                         )}
                         <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                          {(() => {
+                            const nextRosterStep = activeRoster?.steps?.find(s => !s.isCompleted);
+                            if (nextRosterStep) {
+                              return (
+                                <button
+                                  onClick={() =>
+                                    handleLaunchServiceFromRoster({
+                                      lineName: nextRosterStep.lineName,
+                                      dirId: nextRosterStep.dirId,
+                                      departureTime: nextRosterStep.departureTime,
+                                      rosterStepNumber: nextRosterStep.stepNumber
+                                    })
+                                  }
+                                  className="px-3.5 py-2 rounded-xl bg-[#DAE44E] text-[#080226] hover:bg-[#E5EE60] text-xs font-black transition-all flex items-center space-x-1.5 shadow-md"
+                                >
+                                  <span>Course #{nextRosterStep.stepNumber} ({nextRosterStep.lineName} • {nextRosterStep.departureTime})</span>
+                                  <ArrowRight size={13} />
+                                </button>
+                              );
+                            }
+                            return null;
+                          })()}
                           {activeRoster && (
                             <button
                               onClick={() => changeAppMode('roulement')}
-                              className="px-3.5 py-2 rounded-xl bg-[#DAE44E] text-[#080226] hover:bg-[#E5EE60] text-xs font-black transition-all flex items-center space-x-1.5 shadow-md"
+                              className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all flex items-center space-x-1.5 border border-white/10"
                             >
-                              <span>Continuer ma feuille de route</span>
+                              <span>Voir l'itinéraire</span>
                               <ArrowRight size={13} />
                             </button>
                           )}

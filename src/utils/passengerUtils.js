@@ -1,5 +1,54 @@
 // Utilitaires pour le Mode Passagers : Indexation des arrêts, correspondances et prochains départs
 
+const CANONICAL_STOP_NAMES = {
+  'rosenberg': 'Berthée - Rosenberg',
+  'berthee rosenberg': 'Berthée - Rosenberg',
+  'soufflot terminus provisoire/rue de cherbourg': 'Soufflot',
+  'soufflot': 'Soufflot',
+  'cramain universite republique': 'Cramain - Université RER - République',
+  'cramain universite rer republique': 'Cramain - Université RER - République',
+  'cite des erables': 'Cité des Érables',
+  'escadrille normandie niemen': 'Escadrille Normandie-Niémen',
+  'port perret village': 'Port-Perret - Village'
+};
+
+export function normalizeStopKey(rawName) {
+  if (!rawName) return '';
+  const base = rawName
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’']/g, "'")
+    .replace(/[–—-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (CANONICAL_STOP_NAMES[base]) {
+    return CANONICAL_STOP_NAMES[base]
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[–—-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+  return base;
+}
+
+function getCanonicalDisplayName(rawName) {
+  if (!rawName) return '';
+  const clean = rawName.trim().replace(/–/g, '-');
+  const base = clean
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’']/g, "'")
+    .replace(/[–—-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return CANONICAL_STOP_NAMES[base] || clean;
+}
+
 /**
  * Récupère tous les arrêts uniques du réseau avec leurs lignes en correspondance
  */
@@ -14,18 +63,19 @@ export function getAllNetworkStops(busData) {
       if (!sheet || !sheet.allStops) return;
 
       sheet.allStops.forEach(stopName => {
-        const cleanName = stopName.trim();
-        if (!cleanName) return;
+        const displayName = getCanonicalDisplayName(stopName);
+        const key = normalizeStopKey(displayName);
+        if (!key) return;
 
-        if (!stopsMap.has(cleanName)) {
-          stopsMap.set(cleanName, {
-            name: cleanName,
+        if (!stopsMap.has(key)) {
+          stopsMap.set(key, {
+            name: displayName,
             lines: new Map(),
             destinations: new Set()
           });
         }
 
-        const stopEntry = stopsMap.get(cleanName);
+        const stopEntry = stopsMap.get(key);
         if (!stopEntry.lines.has(line.name)) {
           stopEntry.lines.set(line.name, {
             name: line.name,
@@ -56,7 +106,7 @@ export function getAllNetworkStops(busData) {
 export function getUpcomingDeparturesForStop(stopName, busData, currentTime, limit = 15) {
   if (!stopName || !busData || !busData.lines) return [];
 
-  const cleanQuery = stopName.toLowerCase().trim();
+  const targetKey = normalizeStopKey(stopName);
   const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
   const departures = [];
 
@@ -67,7 +117,7 @@ export function getUpcomingDeparturesForStop(stopName, busData, currentTime, lim
 
       sheet.trips.forEach(trip => {
         if (!trip.stops || trip.stops.length < 2) return;
-        const stopIdx = trip.stops.findIndex(s => s.stop.toLowerCase().trim() === cleanQuery);
+        const stopIdx = trip.stops.findIndex(s => normalizeStopKey(s.stop) === targetKey);
         // Ignorer si absent ou si c'est le terminus d'arrivée final
         if (stopIdx < 0 || stopIdx === trip.stops.length - 1) return;
         const stopObj = trip.stops[stopIdx];
@@ -112,4 +162,3 @@ export function getNextDeparturesForStop(busDataOrStopName, stopNameOrBusData, c
   }
   return getUpcomingDeparturesForStop(stopNameOrBusData, busDataOrStopName, currentTime, limit);
 }
-
