@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Cross, MapPin, Clock, Bus, ArrowRight } from '@getpapillon/papicons';
-import { getAllNetworkStops, getUpcomingDeparturesForStop } from '../utils/passengerUtils.js';
+import { buildAllStopsDirectory, getNextDeparturesForStop } from '../utils/passengerUtils.js';
 
 function formatWaitTime(diffMinutes) {
   if (diffMinutes === 0) return "À l'approche";
@@ -17,25 +17,25 @@ export default function PassengerView({ busData, effectiveClock, timeString }) {
   const [selectedLineFilter, setSelectedLineFilter] = useState('all');
   const [selectedStop, setSelectedStop] = useState(null);
 
-  const allStops = useMemo(() => getAllNetworkStops(busData), [busData]);
+  const allStops = useMemo(() => buildAllStopsDirectory(busData), [busData]);
 
   const filteredStops = useMemo(() => {
     return allStops.filter(stop => {
-      const matchesLine = selectedLineFilter === 'all' || stop.lines.some(l => l.name === selectedLineFilter);
+      const matchesLine = selectedLineFilter === 'all' || stop.lines.some(l => l.lineName === selectedLineFilter);
       if (!matchesLine) return false;
 
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       return (
         stop.name.toLowerCase().includes(q) ||
-        stop.lines.some(l => l.name.toLowerCase().includes(q))
+        stop.lines.some(l => l.lineName.toLowerCase().includes(q))
       );
     });
   }, [allStops, searchQuery, selectedLineFilter]);
 
   const nextDepartures = useMemo(() => {
     if (!selectedStop) return [];
-    return getUpcomingDeparturesForStop(selectedStop.name, busData, effectiveClock, 20);
+    return getNextDeparturesForStop(busData, selectedStop.name, effectiveClock, 20);
   }, [busData, selectedStop, effectiveClock]);
 
   return (
@@ -75,11 +75,10 @@ export default function PassengerView({ busData, effectiveClock, timeString }) {
         <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
           <button
             onClick={() => setSelectedLineFilter('all')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold shrink-0 transition-all border ${
-              selectedLineFilter === 'all'
-                ? 'bg-[#DAE44E] text-[#080226] border-[#DAE44E] font-black shadow-md'
-                : 'bg-[#100A38] text-zinc-300 border-white/10 hover:border-white/25'
-            }`}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold shrink-0 transition-all border ${selectedLineFilter === 'all'
+              ? 'bg-[#DAE44E] text-[#080226] border-[#DAE44E] font-black shadow-md'
+              : 'bg-[#100A38] text-zinc-300 border-white/10 hover:border-white/25'
+              }`}
           >
             Toutes ({allStops.length})
           </button>
@@ -88,11 +87,10 @@ export default function PassengerView({ busData, effectiveClock, timeString }) {
             <button
               key={line.lineId}
               onClick={() => setSelectedLineFilter(line.name)}
-              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all border flex items-center space-x-2 ${
-                selectedLineFilter === line.name
-                  ? 'bg-[#DAE44E]/20 text-white border-[#DAE44E] shadow-md'
-                  : 'bg-[#100A38] text-zinc-300 border-white/10 hover:border-white/25'
-              }`}
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all border flex items-center space-x-2 ${selectedLineFilter === line.name
+                ? 'bg-[#DAE44E]/20 text-white border-[#DAE44E] shadow-md'
+                : 'bg-[#100A38] text-zinc-300 border-white/10 hover:border-white/25'
+                }`}
             >
               <img src={line.logoUrl} alt={line.name} className="h-4 w-8 object-contain rounded" />
               <span>{line.name}</span>
@@ -111,11 +109,10 @@ export default function PassengerView({ busData, effectiveClock, timeString }) {
                 key={stop.name}
                 type="button"
                 onClick={() => setSelectedStop(stop)}
-                className={`text-left p-4 rounded-2xl border transition-all flex flex-col justify-between group ${
-                  isSelected
-                    ? 'bg-[#1C1058] border-[#DAE44E] shadow-xl'
-                    : 'bg-[#100A38] border-white/10 hover:border-[#DAE44E]/40 hover:bg-[#140C44]'
-                }`}
+                className={`text-left p-4 rounded-2xl border transition-all flex flex-col justify-between group ${isSelected
+                  ? 'bg-[#1C1058] border-[#DAE44E] shadow-xl'
+                  : 'bg-[#100A38] border-white/10 hover:border-[#DAE44E]/40 hover:bg-[#140C44]'
+                  }`}
               >
                 <div className="space-y-2.5 w-full">
                   <div className="flex items-start justify-between gap-2">
@@ -140,9 +137,9 @@ export default function PassengerView({ busData, effectiveClock, timeString }) {
                   <div className="flex flex-wrap items-center gap-1.5 pt-1">
                     {stop.lines.map(l => (
                       <img
-                        key={l.name}
+                        key={l.lineName}
                         src={l.logoUrl}
-                        alt={`Ligne ${l.name}`}
+                        alt={`Ligne ${l.lineName}`}
                         className="h-5 w-10 object-contain rounded bg-black/30 p-0.5 border border-white/5"
                       />
                     ))}
@@ -187,9 +184,9 @@ export default function PassengerView({ busData, effectiveClock, timeString }) {
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
                   {selectedStop.lines.map(l => (
                     <img
-                      key={l.name}
+                      key={l.lineName}
                       src={l.logoUrl}
-                      alt={l.name}
+                      alt={l.lineName}
                       className="h-5 w-10 object-contain rounded bg-black/40 p-0.5 border border-white/10"
                     />
                   ))}
@@ -219,11 +216,10 @@ export default function PassengerView({ busData, effectiveClock, timeString }) {
                   return (
                     <div
                       key={`${dep.lineName}-${dep.code}-${dep.time}-${idx}`}
-                      className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all ${
-                        isImminent
-                          ? 'bg-[#DAE44E]/15 border-[#DAE44E]/50'
-                          : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.06]'
-                      }`}
+                      className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all ${isImminent
+                        ? 'bg-[#DAE44E]/15 border-[#DAE44E]/50'
+                        : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.06]'
+                        }`}
                     >
                       <div className="flex items-center space-x-3 min-w-0">
                         <img
@@ -236,7 +232,7 @@ export default function PassengerView({ busData, effectiveClock, timeString }) {
                             <span className="text-sm font-extrabold text-white truncate">
                               ➔ {dep.destination}
                             </span>
-                            {(dep.isLimited || dep.isLimitedService) && (
+                            {dep.isLimitedService && (
                               <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30 shrink-0">
                                 Partiel
                               </span>
@@ -252,13 +248,12 @@ export default function PassengerView({ busData, effectiveClock, timeString }) {
 
                       <div className="text-right shrink-0">
                         <div
-                          className={`font-mono text-sm sm:text-base font-black px-3 py-1 rounded-xl border ${
-                            isImminent
-                              ? 'bg-[#DAE44E] text-[#080226] border-[#DAE44E] animate-pulse'
-                              : isSoon
+                          className={`font-mono text-sm sm:text-base font-black px-3 py-1 rounded-xl border ${isImminent
+                            ? 'bg-[#DAE44E] text-[#080226] border-[#DAE44E] animate-pulse'
+                            : isSoon
                               ? 'bg-[#DAE44E]/15 text-[#DAE44E] border-[#DAE44E]/30'
                               : 'bg-white/5 text-white border-white/10'
-                          }`}
+                            }`}
                         >
                           {formatWaitTime(dep.diffMinutes)}
                         </div>
