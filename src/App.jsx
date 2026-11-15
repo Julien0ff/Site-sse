@@ -11,7 +11,7 @@ import PassengerView from './components/PassengerView.jsx';
 import RoulementView from './components/RoulementView.jsx';
 import ProfileModal from './components/ProfileModal.jsx';
 import { fetchDiscordUserProfile, exchangeDiscordCodeForToken } from './utils/discordAuth.js';
-import { syncDriverProfileToFirebase, syncCompletedServiceToFirebase } from './firebase.js';
+import { syncUserWithCloud, syncCompletedServiceToFirebase } from './firebase.js';
 import { 
   getStoredUser, setStoredUser, 
   getDriverStats, recordCompletedService, 
@@ -31,6 +31,7 @@ export default function App() {
   const [user, setUser] = useState(() => getStoredUser());
   const [stats, setStats] = useState(() => getDriverStats());
   const [history, setHistory] = useState(() => getServiceHistory());
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Roulement actif (Feuille de route)
   const [activeRoster, setActiveRoster] = useState(() => getStoredActiveRoster());
@@ -69,6 +70,48 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
+  // Synchronisation Cloud multi-appareils (fusion additive PC + Téléphone)
+  const performCloudSync = async (targetUser = user, extra = {}) => {
+    const u = targetUser || getStoredUser();
+    if (!u || !u.id || String(u.id).startsWith('local_') || u.id === 'guest') return null;
+
+    setIsSyncing(true);
+    try {
+      const res = await syncUserWithCloud({
+        user: u,
+        stats: extra.stats || getDriverStats(),
+        history: extra.history || getServiceHistory(),
+        activeRoster: extra.activeRoster !== undefined ? extra.activeRoster : getStoredActiveRoster(),
+        action: extra.action || 'sync',
+        forceMerge: Boolean(extra.forceMerge)
+      });
+      if (res && res.ok) {
+        if (res.stats) setStats(res.stats);
+        if (Array.isArray(res.history)) setHistory(res.history);
+        if (res.activeRoster !== undefined) setActiveRoster(res.activeRoster);
+      }
+      return res;
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Synchronisation automatique au démarrage, à l'ouverture du profil et au retour sur l'onglet
+  useEffect(() => {
+    if (!user?.id) return;
+    performCloudSync(user);
+
+    const onFocus = () => performCloudSync(user);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (isProfileOpen && user?.id) {
+      performCloudSync(user);
+    }
+  }, [isProfileOpen]);
+
   // Détection OAuth Discord (?code=... ou #access_token=...)
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -81,10 +124,7 @@ export default function App() {
           if (discordUser && discordUser.id) {
             setUser(discordUser);
             setStoredUser(discordUser);
-            syncDriverProfileToFirebase({
-              ...discordUser,
-              ...stats
-            });
+            performCloudSync(discordUser, { forceMerge: true });
           }
         })
         .catch(e => console.error('Erreur OAuth Discord:', e))
@@ -103,10 +143,7 @@ export default function App() {
             if (discordUser && discordUser.id) {
               setUser(discordUser);
               setStoredUser(discordUser);
-              syncDriverProfileToFirebase({
-                ...discordUser,
-                ...stats
-              });
+              performCloudSync(discordUser, { forceMerge: true });
             }
           })
           .catch(e => console.error('Erreur OAuth Discord:', e))
@@ -115,7 +152,7 @@ export default function App() {
           });
       }
     }
-  }, [stats]);
+  }, []);
 
   const changeAppMode = (mode) => {
     setAppMode(mode);
@@ -125,10 +162,7 @@ export default function App() {
   const handleUserLogin = (newUser) => {
     setUser(newUser);
     setStoredUser(newUser);
-    syncDriverProfileToFirebase({
-      ...newUser,
-      ...stats
-    });
+    performCloudSync(newUser, { forceMerge: true });
   };
 
   const handleUserLogout = () => {
@@ -138,8 +172,12 @@ export default function App() {
 
   const handleClearStats = () => {
     clearServiceHistory();
-    setStats(getDriverStats());
+    const emptyStats = getDriverStats();
+    setStats(emptyStats);
     setHistory([]);
+    if (user?.id) {
+      performCloudSync(user, { stats: emptyStats, history: [], action: 'reset' });
+    }
   };
 
   // Lancement d'un service depuis une feuille de route
@@ -514,11 +552,13 @@ export default function App() {
 
     recordCompletedService(servicePayload);
     const updatedStats = getDriverStats();
+    const updatedHistory = getServiceHistory();
     setStats(updatedStats);
-    setHistory(getServiceHistory());
+    setHistory(updatedHistory);
     setServiceCompleted(true);
 
     // Cochage automatique de l'étape correspondante sur la feuille de route active
+    let nextRoster = activeRoster;
     if (activeRoster && activeRoster.steps?.length) {
       const launched = activeRoster.steps.find(s => s.stepNumber === activeRosterStep && s.dirId === selectedDirection?.dirId);
       const targetStep = launched || activeRoster.steps.find(s => !s.isCompleted && s.dirId === selectedDirection?.dirId);
@@ -531,23 +571,25 @@ export default function App() {
             : s
         );
         const completedCount = updatedSteps.filter(s => s.isCompleted).length;
-        const updatedRoster = {
+        nextRoster = {
           ...activeRoster,
           steps: updatedSteps,
           completedSteps: completedCount
         };
-        setActiveRoster(updatedRoster);
-        setStoredActiveRoster(updatedRoster);
+        setActiveRoster(nextRoster);
+        setStoredActiveRoster(nextRoster);
         setLastAutoCheckedStep(targetStep.stepNumber);
       }
     }
 
-    // Synchronisation Cloud Firestore
+    // Synchronisation Cloud multi-appareils (fusion additive PC + Téléphone)
     syncCompletedServiceToFirebase(servicePayload);
-    if (user) {
-      syncDriverProfileToFirebase({
-        ...user,
-        ...updatedStats
+    if (user?.id) {
+      performCloudSync(user, {
+        stats: updatedStats,
+        history: updatedHistory,
+        activeRoster: nextRoster,
+        forceMerge: true
       });
     }
   };
@@ -726,7 +768,12 @@ export default function App() {
         <RoulementView 
           busData={busData} 
           activeRoster={activeRoster} 
-          setActiveRoster={setActiveRoster} 
+          setActiveRoster={(nextRoster) => {
+            setActiveRoster(nextRoster);
+            if (user?.id) {
+              performCloudSync(user, { activeRoster: nextRoster });
+            }
+          }} 
           onLaunchService={handleLaunchServiceFromRoster} 
           timeString={timeString} 
         />
@@ -1779,6 +1826,8 @@ export default function App() {
         stats={stats}
         history={history}
         onClearStats={handleClearStats}
+        onSync={() => performCloudSync(user, { forceMerge: true })}
+        isSyncing={isSyncing}
       />
 
     </div>

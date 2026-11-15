@@ -6,8 +6,31 @@ const STORAGE_KEYS = {
   HISTORY: 'sse_driver_history',
   ACTIVE_ROUTER: 'sse_active_roulement',
   SAVED_ROUTERS: 'sse_saved_roulements',
-  APP_MODE: 'sse_app_mode'
+  APP_MODE: 'sse_app_mode',
+  DEVICE_ID: 'sse_device_id'
 };
+
+export function getDeviceId() {
+  try {
+    let devId = localStorage.getItem(STORAGE_KEYS.DEVICE_ID);
+    if (!devId) {
+      devId = `dev_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+      localStorage.setItem(STORAGE_KEYS.DEVICE_ID, devId);
+    }
+    return devId;
+  } catch {
+    return 'dev_default';
+  }
+}
+
+export function getServiceSyncKey(s, fallbackIndex = 0) {
+  if (!s) return '';
+  if (s.syncId) return String(s.syncId);
+  if (s.id) {
+    return `id_${s.id}_${s.lineName || ''}_${s.departureTime || ''}`;
+  }
+  return `sig_${s.date || fallbackIndex}_${s.lineName || ''}_${s.code || s.directionCode || ''}_${s.departureTime || ''}_${s.destination || ''}`;
+}
 
 // --- PROFIL UTILISATEUR & DISCORD ---
 
@@ -16,7 +39,7 @@ export function getStoredUser() {
     const raw = localStorage.getItem(STORAGE_KEYS.USER);
     if (!raw) return null;
     return JSON.parse(raw);
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -47,8 +70,15 @@ export function getDriverStats() {
         linesDriven: {}
       };
     }
-    return JSON.parse(raw);
-  } catch (e) {
+    const parsed = JSON.parse(raw);
+    return {
+      tripsCompleted: Number(parsed.tripsCompleted || 0),
+      totalMinutesDriven: Number(parsed.totalMinutesDriven || 0),
+      stopsValidated: Number(parsed.stopsValidated || 0),
+      onTimeCount: Number(parsed.onTimeCount || 0),
+      linesDriven: parsed.linesDriven || {}
+    };
+  } catch {
     return {
       tripsCompleted: 0,
       totalMinutesDriven: 0,
@@ -59,53 +89,128 @@ export function getDriverStats() {
   }
 }
 
-export function recordCompletedService(service) {
+export function setDriverStats(stats) {
   try {
-    // 1. Mettre à jour les stats
-    const stats = getDriverStats();
-    stats.tripsCompleted += 1;
-    stats.totalMinutesDriven += (service.durationMinutes || 25);
-    stats.stopsValidated += (service.stopCount || 10);
-    if (service.delayMinutes === 0) {
-      stats.onTimeCount += 1;
-    }
-    const lineKey = service.lineName || 'Autre';
-    stats.linesDriven[lineKey] = (stats.linesDriven[lineKey] || 0) + 1;
+    if (!stats) return;
     localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
-
-    // 2. Ajouter à l'historique
-    const history = getServiceHistory();
-    const newEntry = {
-      id: Date.now().toString(),
-      date: new Date().toISOString(),
-      lineName: service.lineName,
-      logoUrl: service.logoUrl,
-      code: service.code,
-      destination: service.destination,
-      departureTime: service.departureTime,
-      arrivalTime: service.arrivalTime,
-      delayMinutes: service.delayMinutes || 0,
-      stopsCount: service.stopCount || 0
-    };
-    history.unshift(newEntry);
-    // Conserver les 50 derniers services
-    const trimmedHistory = history.slice(0, 50);
-    localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(trimmedHistory));
-
-    return { stats, history: trimmedHistory };
   } catch (e) {
-    console.error('Erreur recordCompletedService:', e);
-    return null;
+    console.error('Erreur setDriverStats:', e);
   }
 }
 
 export function getServiceHistory() {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.HISTORY);
-    if (!raw) return [];
-    return JSON.parse(raw);
-  } catch (e) {
+    const list = raw ? JSON.parse(raw) : [];
+    const normalized = Array.isArray(list)
+      ? list.map((item, idx) => ({
+          ...item,
+          id: item.id ? String(item.id) : `hist_${idx}`,
+          syncId: getServiceSyncKey(item, idx),
+          stopsCount: Number(item.stopsCount || item.stopCount || 15),
+          stopCount: Number(item.stopsCount || item.stopCount || 15),
+          durationMinutes: Number(item.durationMinutes || 22)
+        }))
+      : [];
+
+    // Si le compteur local tripsCompleted dépasse la taille de l'historique local,
+    // générer des entrées déterministes liées à cet appareil pour ne perdre aucun service lors de la fusion multi-appareils
+    const stats = getDriverStats();
+    if (stats.tripsCompleted > normalized.length) {
+      const devId = getDeviceId();
+      const missingCount = stats.tripsCompleted - normalized.length;
+      const avgDuration = Math.max(
+        15,
+        Math.round((stats.totalMinutesDriven || stats.tripsCompleted * 22) / Math.max(1, stats.tripsCompleted))
+      );
+      const avgStops = Math.max(
+        10,
+        Math.round((stats.stopsValidated || stats.tripsCompleted * 15) / Math.max(1, stats.tripsCompleted))
+      );
+
+      for (let i = 0; i < missingCount; i++) {
+        const legacyId = `legacy_${devId}_${i + 1}`;
+        normalized.push({
+          id: legacyId,
+          syncId: `id_${legacyId}_SSE_00:00`,
+          date: new Date(Date.now() - (i + 1) * 3600000).toISOString(),
+          lineName: '134',
+          logoUrl: '/logos/134.png',
+          code: '134BR',
+          destination: 'Service enregistré',
+          departureTime: '--:--',
+          arrivalTime: '--:--',
+          durationMinutes: avgDuration,
+          delayMinutes: 0,
+          stopsCount: avgStops,
+          stopCount: avgStops,
+          deviceId: devId
+        });
+      }
+      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(normalized));
+    }
+
+    return normalized;
+  } catch {
     return [];
+  }
+}
+
+export function setServiceHistory(history) {
+  try {
+    if (!Array.isArray(history)) return;
+    localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history.slice(0, 200)));
+  } catch (e) {
+    console.error('Erreur setServiceHistory:', e);
+  }
+}
+
+export function recordCompletedService(service) {
+  try {
+    const devId = getDeviceId();
+    const nowId = `${Date.now()}_${devId.slice(-4)}`;
+    const stopsCount = Number(service.stopCount || service.stopsCount || 15);
+    const durationMinutes = Number(service.durationMinutes || 22);
+
+    // 1. Mettre à jour les stats locales
+    const stats = getDriverStats();
+    stats.tripsCompleted += 1;
+    stats.totalMinutesDriven += durationMinutes;
+    stats.stopsValidated += stopsCount;
+    if (Number(service.delayMinutes || 0) === 0) {
+      stats.onTimeCount += 1;
+    }
+    const lineKey = service.lineName || 'Autre';
+    stats.linesDriven[lineKey] = (stats.linesDriven[lineKey] || 0) + 1;
+    localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
+
+    // 2. Ajouter à l'historique avec identifiant unique de synchronisation multi-appareils
+    const history = getServiceHistory();
+    const newEntry = {
+      id: nowId,
+      syncId: `id_${nowId}_${service.lineName || ''}_${service.departureTime || ''}`,
+      date: new Date().toISOString(),
+      lineName: service.lineName || 'Ligne',
+      logoUrl: service.logoUrl || `/logos/${service.lineName || '134'}.png`,
+      code: service.code || service.directionCode || '',
+      origin: service.origin || '',
+      destination: service.destination || '',
+      departureTime: service.departureTime || '',
+      arrivalTime: service.arrivalTime || '',
+      durationMinutes,
+      delayMinutes: Number(service.delayMinutes || 0),
+      stopsCount,
+      stopCount: stopsCount,
+      deviceId: devId
+    };
+    history.unshift(newEntry);
+    const trimmedHistory = history.slice(0, 200);
+    localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(trimmedHistory));
+
+    return { stats, history: trimmedHistory, newEntry };
+  } catch (e) {
+    console.error('Erreur recordCompletedService:', e);
+    return null;
   }
 }
 
@@ -130,7 +235,7 @@ export function getStoredActiveRoster() {
     const raw = localStorage.getItem(STORAGE_KEYS.ACTIVE_ROUTER);
     if (!raw) return null;
     return JSON.parse(raw);
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -140,7 +245,11 @@ export function setStoredActiveRoster(roster) {
     if (!roster) {
       localStorage.removeItem(STORAGE_KEYS.ACTIVE_ROUTER);
     } else {
-      localStorage.setItem(STORAGE_KEYS.ACTIVE_ROUTER, JSON.stringify(roster));
+      const withTimestamp = {
+        ...roster,
+        updatedAt: new Date().toISOString()
+      };
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_ROUTER, JSON.stringify(withTimestamp));
     }
   } catch (e) {
     console.error('Erreur setStoredActiveRoster:', e);

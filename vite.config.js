@@ -1,11 +1,61 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { processUserSyncRequest } from './api/user-sync.js'
 
 function discordOAuthDevMiddleware(env) {
   return {
     name: 'discord-oauth-dev-middleware',
     configureServer(server) {
+      server.middlewares.use('/api/user-sync', async (req, res) => {
+        res.setHeader('Access-Control-Allow-Origin', '*')
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+        if (req.method === 'OPTIONS') {
+          res.statusCode = 200
+          res.end()
+          return
+        }
+
+        const token = env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN
+        const urlObj = new URL(req.url, 'http://localhost:5173')
+        const query = Object.fromEntries(urlObj.searchParams.entries())
+
+        if (req.method === 'GET') {
+          try {
+            const result = await processUserSyncRequest({ method: 'GET', query, body: {}, token })
+            res.statusCode = result.status
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify(result.data))
+          } catch (err) {
+            res.statusCode = 500
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ error: err.message }))
+          }
+          return
+        }
+
+        let rawBody = ''
+        req.on('data', chunk => { rawBody += chunk })
+        req.on('end', async () => {
+          try {
+            const result = await processUserSyncRequest({
+              method: req.method,
+              query,
+              body: rawBody,
+              token
+            })
+            res.statusCode = result.status
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify(result.data))
+          } catch (err) {
+            res.statusCode = 500
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ error: err.message }))
+          }
+        })
+      })
+
       server.middlewares.use('/api/discord-token', async (req, res) => {
         if (req.method !== 'POST') {
           res.statusCode = 405

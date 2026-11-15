@@ -12,7 +12,9 @@ export default function ProfileModal({
   onLogout,
   stats,
   history = [],
-  onClearStats
+  onClearStats,
+  onSync,
+  isSyncing = false
 }) {
   const [usernameInput, setUsernameInput] = useState('');
   const [discordTagInput, setDiscordTagInput] = useState('');
@@ -173,21 +175,33 @@ export default function ProfileModal({
                     <span className="text-[10px] font-mono font-black uppercase bg-[#DAE44E] text-[#080226] px-2.5 py-0.5 rounded-full">
                       {rank.title}
                     </span>
-                    <span className="text-[11px] text-zinc-400 font-mono">
-                      Depuis le {user.joinedAt}
+                    <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-400/30 px-2 py-0.5 rounded-full">
+                      {isSyncing ? 'Synchronisation...' : 'Cloud Sync Actif'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={onLogout}
-                className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-mono font-bold flex items-center space-x-1.5 self-start sm:self-auto transition-all"
-              >
-                <Logout size={14} />
-                <span>Déconnexion</span>
-              </button>
+              <div className="flex items-center space-x-2 self-start sm:self-auto">
+                {onSync && !String(user.id).startsWith('local_') && (
+                  <button
+                    type="button"
+                    onClick={onSync}
+                    disabled={isSyncing}
+                    className="px-3 py-2 rounded-xl bg-[#DAE44E]/15 hover:bg-[#DAE44E]/25 text-[#DAE44E] border border-[#DAE44E]/30 text-xs font-mono font-bold transition-all disabled:opacity-50"
+                  >
+                    {isSyncing ? 'Sync...' : 'Synchroniser'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-mono font-bold flex items-center space-x-1.5 transition-all"
+                >
+                  <Logout size={14} />
+                  <span>Déconnexion</span>
+                </button>
+              </div>
             </div>
           )}
 
