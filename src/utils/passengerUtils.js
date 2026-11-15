@@ -29,6 +29,7 @@ export function getAllNetworkStops(busData) {
         if (!stopEntry.lines.has(line.name)) {
           stopEntry.lines.set(line.name, {
             name: line.name,
+            lineName: line.name,
             lineId: line.lineId,
             logoUrl: line.logoUrl
           });
@@ -102,3 +103,13 @@ export function getUpcomingDeparturesForStop(stopName, busData, currentTime, lim
 
   return departures.slice(0, limit);
 }
+
+export const buildAllStopsDirectory = getAllNetworkStops;
+export const buildStopsDirectory = getAllNetworkStops;
+export function getNextDeparturesForStop(busDataOrStopName, stopNameOrBusData, currentTime, limit = 15) {
+  if (typeof busDataOrStopName === 'string') {
+    return getUpcomingDeparturesForStop(busDataOrStopName, stopNameOrBusData, currentTime, limit);
+  }
+  return getUpcomingDeparturesForStop(stopNameOrBusData, busDataOrStopName, currentTime, limit);
+}
+

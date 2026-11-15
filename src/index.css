@@ -120,3 +120,43 @@
 .animate-upcoming-stop {
   animation: upcoming-stop-slide 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* Animation de validation automatique sur la feuille de route */
+@keyframes autocheck-card-pop {
+  0% {
+    transform: scale(0.97);
+    box-shadow: 0 0 0 0 rgba(218, 228, 78, 0.7);
+  }
+  45% {
+    transform: scale(1.015);
+    box-shadow: 0 0 35px 4px rgba(218, 228, 78, 0.45);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(218, 228, 78, 0);
+  }
+}
+
+@keyframes check-badge-bounce {
+  0% {
+    transform: scale(0.3) rotate(-25deg);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.25) rotate(6deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.animate-autocheck-pop {
+  animation: autocheck-card-pop 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-check-bounce {
+  animation: check-badge-bounce 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+

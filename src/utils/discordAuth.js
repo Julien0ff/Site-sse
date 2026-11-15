@@ -1,15 +1,37 @@
-// Authentification OAuth2 Discord (configuration via .env uniquement)
+// Authentification OAuth2 Discord (configuration via .env + échange sécurisé côté serveur)
 
 export function getDiscordClientId() {
   return (import.meta.env.VITE_DISCORD_CLIENT_ID || '').trim();
 }
 
+export function getDiscordRedirectUri() {
+  const currentUrl = new URL(window.location.href);
+  return `${currentUrl.origin}${currentUrl.pathname}`;
+}
+
 export function getDiscordLoginUrl() {
   const clientId = getDiscordClientId();
   if (!clientId) return null;
-  const currentUrl = new URL(window.location.href);
-  const redirectUri = encodeURIComponent(`${currentUrl.origin}${currentUrl.pathname}`);
-  return `https://discord.com/oauth2/authorize?client_id=${clientId}&response_type=token&scope=identify%20guilds&redirect_uri=${redirectUri}`;
+  const redirectUri = encodeURIComponent(getDiscordRedirectUri());
+  return `https://discord.com/oauth2/authorize?client_id=${clientId}&response_type=code&scope=identify%20guilds&redirect_uri=${redirectUri}`;
+}
+
+export async function exchangeDiscordCodeForToken(code) {
+  const res = await fetch('/api/discord-token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code,
+      redirectUri: getDiscordRedirectUri()
+    })
+  });
+
+  if (!res.ok) {
+    throw new Error(`Erreur échange OAuth Discord (${res.status})`);
+  }
+
+  const data = await res.json();
+  return data.access_token;
 }
 
 export async function fetchDiscordUserProfile(accessToken) {

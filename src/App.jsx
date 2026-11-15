@@ -10,7 +10,7 @@ import WelcomeView from './components/WelcomeView.jsx';
 import PassengerView from './components/PassengerView.jsx';
 import RoulementView from './components/RoulementView.jsx';
 import ProfileModal from './components/ProfileModal.jsx';
-import { fetchDiscordUserProfile } from './utils/discordAuth.js';
+import { fetchDiscordUserProfile, exchangeDiscordCodeForToken } from './utils/discordAuth.js';
 import { syncDriverProfileToFirebase, syncCompletedServiceToFirebase } from './firebase.js';
 import { 
   getStoredUser, setStoredUser, 
@@ -34,6 +34,8 @@ export default function App() {
 
   // Roulement actif (Feuille de route)
   const [activeRoster, setActiveRoster] = useState(() => getStoredActiveRoster());
+  const [activeRosterStep, setActiveRosterStep] = useState(null);
+  const [lastAutoCheckedStep, setLastAutoCheckedStep] = useState(null);
 
   // --- NAVIGATION WIZARD CONDUCTEUR ---
   // 'select-line' | 'select-time' | 'service'
@@ -67,8 +69,31 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // Détection OAuth Discord (#access_token=...)
+  // Détection OAuth Discord (?code=... ou #access_token=...)
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const code = searchParams.get('code');
+
+    if (code) {
+      exchangeDiscordCodeForToken(code)
+        .then(token => fetchDiscordUserProfile(token))
+        .then(discordUser => {
+          if (discordUser && discordUser.id) {
+            setUser(discordUser);
+            setStoredUser(discordUser);
+            syncDriverProfileToFirebase({
+              ...discordUser,
+              ...stats
+            });
+          }
+        })
+        .catch(e => console.error('Erreur OAuth Discord:', e))
+        .finally(() => {
+          window.history.replaceState(null, '', window.location.pathname);
+        });
+      return;
+    }
+
     if (window.location.hash.includes('access_token=')) {
       const params = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = params.get('access_token');
@@ -78,7 +103,6 @@ export default function App() {
             if (discordUser && discordUser.id) {
               setUser(discordUser);
               setStoredUser(discordUser);
-              // Synchroniser automatiquement avec Firebase Firestore
               syncDriverProfileToFirebase({
                 ...discordUser,
                 ...stats
@@ -119,7 +143,7 @@ export default function App() {
   };
 
   // Lancement d'un service depuis une feuille de route
-  const handleLaunchServiceFromRoster = ({ lineName, dirId, departureTime: depTime }) => {
+  const handleLaunchServiceFromRoster = ({ lineName, dirId, departureTime: depTime, rosterStepNumber = null }) => {
     const targetLine = busData.lines.find(l => l.name === lineName);
     if (!targetLine) return;
     const targetDir = targetLine.directions.find(d => d.dirId === dirId) || targetLine.directions[0];
@@ -130,6 +154,8 @@ export default function App() {
     setDelayMinutes(0);
     setIsForceDeparted(false);
     setServiceCompleted(false);
+    setLastAutoCheckedStep(null);
+    setActiveRosterStep(rosterStepNumber);
     setServiceTab('conduite');
     setStep('service');
     changeAppMode('conducteur');
@@ -465,6 +491,33 @@ export default function App() {
     setStats(updatedStats);
     setHistory(getServiceHistory());
     setServiceCompleted(true);
+
+    // Cochage automatique de l'étape correspondante sur la feuille de route active
+    if (activeRoster && activeRoster.steps?.length) {
+      const targetStep = activeRoster.steps.find(s =>
+        activeRosterStep
+          ? s.stepNumber === activeRosterStep
+          : (!s.isCompleted && (s.dirId === selectedDirection?.dirId || s.lineName === activeLine?.name))
+      );
+
+      if (targetStep && !targetStep.isCompleted) {
+        const now = Date.now();
+        const updatedSteps = activeRoster.steps.map(s =>
+          s.stepNumber === targetStep.stepNumber
+            ? { ...s, isCompleted: true, justCompletedAt: now }
+            : s
+        );
+        const completedCount = updatedSteps.filter(s => s.isCompleted).length;
+        const updatedRoster = {
+          ...activeRoster,
+          steps: updatedSteps,
+          completedSteps: completedCount
+        };
+        setActiveRoster(updatedRoster);
+        setStoredActiveRoster(updatedRoster);
+        setLastAutoCheckedStep(targetStep.stepNumber);
+      }
+    }
 
     // Synchronisation Cloud Firestore
     syncCompletedServiceToFirebase(servicePayload);
@@ -1209,40 +1262,44 @@ export default function App() {
 
                     {/* Félicitations et actions après clôture de service */}
                     {serviceCompleted && (
-                      <div className="bg-[#DAE44E]/10 border border-[#DAE44E]/30 rounded-2xl p-4 text-center space-y-2.5 mt-3 animate-fade-in">
+                      <div className="bg-[#DAE44E]/10 border border-[#DAE44E]/30 rounded-2xl p-4 text-center space-y-2.5 mt-3 animate-autocheck-pop">
                         <div className="flex items-center justify-center space-x-1.5 text-xs font-mono font-bold text-[#DAE44E]">
                           <Sparkles size={14} className="shrink-0" />
-                          <span>FÉLICITATIONS ! SERVICE ENREGISTRÉ (+100 XP)</span>
+                          <span>SERVICE VALIDÉ & ENREGISTRÉ</span>
                         </div>
-                        <p className="text-xs text-zinc-300">
-                          Vos statistiques conducteur ont été mises à jour dans votre profil.
-                        </p>
+                        {lastAutoCheckedStep && (
+                          <div className="inline-flex items-center space-x-1.5 bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-mono font-bold px-3 py-1 rounded-full animate-check-bounce">
+                            <Check size={14} />
+                            <span>Étape #{lastAutoCheckedStep} cochée automatiquement sur votre feuille de route !</span>
+                          </div>
+                        )}
                         <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                          <button
-                            onClick={() => setIsProfileOpen(true)}
-                            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all flex items-center space-x-1"
-                          >
-                            <User size={13} />
-                            <span>Voir mon profil</span>
-                          </button>
+                          {activeRoster && (
+                            <button
+                              onClick={() => changeAppMode('roulement')}
+                              className="px-3.5 py-2 rounded-xl bg-[#DAE44E] text-[#080226] hover:bg-[#E5EE60] text-xs font-black transition-all flex items-center space-x-1.5 shadow-md"
+                            >
+                              <span>Continuer ma feuille de route</span>
+                              <ArrowRight size={13} />
+                            </button>
+                          )}
                           <button
                             onClick={() => {
                               setStep('select-line');
                               setServiceCompleted(false);
                               setCurrentStopIndex(0);
                             }}
-                            className="px-3 py-1.5 rounded-xl bg-[#DAE44E] text-[#080226] hover:bg-[#E5EE60] text-xs font-black transition-all"
+                            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all"
                           >
-                            Nouveau service
+                            Autre service
                           </button>
-                          {activeRoster && (
-                            <button
-                              onClick={() => changeAppMode('roulement')}
-                              className="px-3 py-1.5 rounded-xl bg-amber-400 text-[#080226] hover:bg-amber-300 text-xs font-black transition-all"
-                            >
-                              Feuille de route →
-                            </button>
-                          )}
+                          <button
+                            onClick={() => setIsProfileOpen(true)}
+                            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all flex items-center space-x-1"
+                          >
+                            <User size={13} />
+                            <span>Profil</span>
+                          </button>
                         </div>
                       </div>
                     )}
