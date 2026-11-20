@@ -63,7 +63,7 @@ export default function ServiceConsole({ svc, busData, handleFinishService, acti
       </div>
 
       {/* Onglets du pupitre */}
-      <div className="flex gap-1 border-b border-sse-line overflow-x-auto" role="tablist">
+      <div className="flex gap-1 border-b border-sse-line overflow-x-auto no-scrollbar" role="tablist">
         {[
           { id: 'conduite', label: 'Conduite' },
           { id: 'arrets', label: 'Arrêts' },

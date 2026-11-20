@@ -211,3 +211,17 @@
   animation: check-badge-bounce 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+
+/* Barre d'onglets défilante sans barre de défilement visible (Windows) */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Barres de défilement fines et sombres (Firefox) */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #2A2160 transparent;
+}

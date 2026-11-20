@@ -53,8 +53,8 @@ export default function StopsTab({ svc }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
-      {/* Résumé : en haut sur mobile, colonne collante sur PC */}
-      <aside className="lg:col-span-4 lg:order-2 lg:sticky lg:top-20 space-y-4">
+      {/* Résumé : sous la liste sur mobile, colonne collante sur PC */}
+      <aside className="lg:col-span-4 order-2 lg:sticky lg:top-20 space-y-4">
         <div className="bg-sse-panel border border-white/10 rounded-xl p-5 space-y-4">
           <div>
             <span className="text-sm text-zinc-400">
@@ -129,10 +129,10 @@ export default function StopsTab({ svc }) {
       </aside>
 
       {/* Thermomètre de ligne */}
-      <section className="lg:col-span-8 lg:order-1 bg-sse-panel border border-white/10 rounded-xl overflow-hidden" aria-label="Arrêts du service">
+      <section className="lg:col-span-8 order-1 bg-sse-panel border border-white/10 rounded-xl overflow-hidden" aria-label="Arrêts du service">
         <header className="flex items-center justify-between px-5 py-3 border-b border-white/10">
           <h3 className="text-sm font-semibold text-zinc-300">
-            {stopsCount} arrêts · {selectedTrip?.isLimitedService ? 'service partiel' : 'service complet'}
+            {stopsCount} arrêts, {selectedTrip?.isLimitedService ? 'service partiel' : 'service complet'}
           </h3>
           <span className="text-xs text-zinc-400 hidden sm:block">
             {isInService
