@@ -18,7 +18,8 @@ export const EMPTY_SESSION = {
   completed: false,
   lastAutoChecked: null,   // n° de course cochée automatiquement sur la feuille de route
   rosterStep: null,        // n° de course lancée depuis la feuille de route
-  tab: 'conduite'          // 'conduite' | 'arrets' | 'grille' | 'speciaux'
+  tab: 'conduite',         // 'conduite' | 'arrets' | 'grille' | 'speciaux'
+  autoAdvance: false       // défilement automatique des arrêts selon la fiche horaire
 };
 
 function readSession() {

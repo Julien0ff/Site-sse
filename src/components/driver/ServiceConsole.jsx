@@ -1,4 +1,5 @@
 import React from 'react';
+import { textOnLineColor } from '../../utils/lineColors.js';
 import DriveTab from './DriveTab.jsx';
 import StopsTab from './StopsTab.jsx';
 import TimetableTab from './TimetableTab.jsx';
@@ -26,7 +27,7 @@ export default function ServiceConsole({ svc, busData, handleFinishService, acti
         <div className="girouette flex items-stretch flex-1 min-w-0" aria-label={`Girouette : ${activeLine.name} ${selectedTrip?.destinationStop || selectedDirection.destination}`}>
           <span
             className="girouette-code flex items-center px-3 sm:px-4 text-2xl sm:text-3xl shrink-0"
-            style={{ backgroundColor: activeLine.color || '#F3C318' }}
+            style={{ backgroundColor: activeLine.color || '#F3C318', color: activeLine.textColor || textOnLineColor(activeLine.color || '#F3C318') }}
           >
             {activeLine.name}
           </span>

@@ -322,17 +322,58 @@ export function useDriverService({ busData, session, patch, effectiveClock, keyb
     return activeTripStops[1] || activeTripStops[0];
   }, [activeTripStops]);
 
-  // Raccourcis clavier (Flèche Droite / Gauche) au pupitre en conduite
+  // --- Défilement automatique des arrêts ---
+  // Un arrêt est considéré desservi 45 s après son heure de passage (régulation
+  // comprise) : c'est le même seuil que l'indication « dépassé » du pupitre.
+  const AUTO_PASS_SECONDS = 45;
+  const autoAdvance = Boolean(session.autoAdvance);
+  const setAutoAdvance = (value) => patch({ autoAdvance: Boolean(value) });
+
+  // Secondes avant le passage à un arrêt (négatif = passé), minuit géré
+  const secondsUntilStop = (stopTime) => {
+    if (!stopTime) return null;
+    const [h, m] = stopTime.split(':').map(Number);
+    const target = h * 3600 + m * 60 + delayMinutes * 60;
+    const now = effectiveClock.getHours() * 3600 + effectiveClock.getMinutes() * 60 + effectiveClock.getSeconds();
+    let diff = target - now;
+    if (diff < -43200) diff += 86400;
+    if (diff > 43200) diff -= 86400;
+    return diff;
+  };
+
+  // Arrêt que la fiche horaire place « prochain » à cet instant
+  const scheduledStopIndex = useMemo(() => {
+    if (!activeTripStops.length) return 0;
+    const idx = activeTripStops.findIndex(s => {
+      const diff = secondsUntilStop(s.time);
+      return diff === null || diff >= -AUTO_PASS_SECONDS;
+    });
+    return idx < 0 ? activeTripStops.length - 1 : idx;
+  }, [activeTripStops, effectiveClock, delayMinutes]);
+
   useEffect(() => {
-    if (!keyboardEnabled || step !== 'service' || serviceTab !== 'conduite' || !isInService) return;
+    if (!autoAdvance || step !== 'service' || !isInService || serviceCompleted) return;
+    // Départ forcé en avance : on reste au départ tant que la fiche ne fait pas avancer
+    if (scheduledStopIndex !== currentStopIndex) patch({ stopIndex: scheduledStopIndex });
+  }, [autoAdvance, step, isInService, serviceCompleted, scheduledStopIndex, currentStopIndex]);
+
+  // Avance / recul manuels : reprennent la main sur le mode automatique
+  const goToStop = (index) => patch({
+    stopIndex: Math.max(0, Math.min(activeTripStops.length - 1, index)),
+    autoAdvance: false
+  });
+
+  // Raccourcis clavier (Flèche Droite / Gauche) au pupitre
+  useEffect(() => {
+    if (!keyboardEnabled || step !== 'service' || serviceTab === 'grille' || !isInService) return;
     const handleKeyDown = (e) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target?.tagName)) return;
       if (e.key === 'ArrowRight') {
         e.preventDefault();
-        setCurrentStopIndex(prev => Math.min(activeTripStops.length - 1, prev + 1));
+        patch(s => ({ stopIndex: Math.min(activeTripStops.length - 1, s.stopIndex + 1), autoAdvance: false }));
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        setCurrentStopIndex(prev => Math.max(0, prev - 1));
+        patch(s => ({ stopIndex: Math.max(0, s.stopIndex - 1), autoAdvance: false }));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -377,6 +418,7 @@ export function useDriverService({ busData, session, patch, effectiveClock, keyb
     availableTrips, nextScheduledTrip, selectedTrip, activeTripStops,
     departureAnalysis, isInService, currentStop, nextStopCountdown,
     getAdjustedStopTime, getMinutesFromNow, terminusNextStop, upcomingStops,
-    activeLine
+    activeLine,
+    autoAdvance, setAutoAdvance, scheduledStopIndex, secondsUntilStop, goToStop
   };
 }

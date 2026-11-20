@@ -155,7 +155,8 @@ lines_list = [
         "lineId": "134",
         "name": "134",
         "logoUrl": "/logos/134.png",
-        "color": "#DE005A",
+        "color": "#9A0E54",  # couleur du logo
+        "textColor": "#FFFFFF",  # couleur du numéro sur le logo
         "spawnPoints": ['Chaillot-Batignolles RER', 'Hôtel de Ville de Chaillot-Batignolles'],
         "girCodes": gir_by_line.get('134', []),
         "directions": [
@@ -181,7 +182,8 @@ lines_list = [
         "lineId": "135",
         "name": "135",
         "logoUrl": "/logos/135.png",
-        "color": "#F6BE00",
+        "color": "#FFD700",  # couleur du logo
+        "textColor": "#0A0612",  # couleur du numéro sur le logo
         "spawnPoints": ['Chaillot-Batignolles RER', 'Narbérale RER', 'La Vallée', 'Boulevard National - Mac Mahon', 'Cramain - Université RER'],
         "girCodes": gir_by_line.get('135', []),
         "directions": [
@@ -207,7 +209,8 @@ lines_list = [
         "lineId": "142",
         "name": "142",
         "logoUrl": "/logos/142.png",
-        "color": "#B587B6",
+        "color": "#C4A2CB",  # couleur du logo
+        "textColor": "#0A0612",  # couleur du numéro sur le logo
         "spawnPoints": ['Chaillot-Batignolles RER', 'Pont de Narbérale - Quai Bourbon'],
         "girCodes": gir_by_line.get('142', []),
         "directions": [
@@ -233,7 +236,8 @@ lines_list = [
         "lineId": "149",
         "name": "149",
         "logoUrl": "/logos/149.png",
-        "color": "#B85D19",
+        "color": "#847C3D",  # couleur du logo
+        "textColor": "#FFFFFF",  # couleur du numéro sur le logo
         "spawnPoints": ['Chaillot-Batignolles RER'],
         "girCodes": gir_by_line.get('149', []),
         "directions": [
@@ -259,7 +263,8 @@ lines_list = [
         "lineId": "233",
         "name": "233",
         "logoUrl": "/logos/233.png",
-        "color": "#009AA6",
+        "color": "#008080",  # couleur du logo
+        "textColor": "#FFFFFF",  # couleur du numéro sur le logo
         "spawnPoints": ['Narbérale RER', 'Hôtel de Ville de Chaillot-Batignolles'],
         "girCodes": gir_by_line.get('233', []),
         "directions": [
@@ -285,7 +290,8 @@ lines_list = [
         "lineId": "242",
         "name": "242",
         "logoUrl": "/logos/242.png",
-        "color": "#0066CC",
+        "color": "#0165FC",  # couleur du logo
+        "textColor": "#FFFFFF",  # couleur du numéro sur le logo
         "spawnPoints": ['Gare de Cramain - Université'],
         "girCodes": gir_by_line.get('242', []),
         "directions": [
@@ -311,7 +317,8 @@ lines_list = [
         "lineId": "257",
         "name": "257",
         "logoUrl": "/logos/257.png",
-        "color": "#88B04B",
+        "color": "#74DC65",  # couleur du logo
+        "textColor": "#0A0612",  # couleur du numéro sur le logo
         "spawnPoints": ['Cramain - Université RER', 'Boulevard National - Mac Mahon', 'Fédération'],
         "girCodes": gir_by_line.get('257', []),
         "directions": [
@@ -337,7 +344,8 @@ lines_list = [
         "lineId": "315",
         "name": "315",
         "logoUrl": "/logos/315.png",
-        "color": "#FF9900",
+        "color": "#DBAC29",  # couleur du logo
+        "textColor": "#0A0612",  # couleur du numéro sur le logo
         "spawnPoints": ['Chaillot-Batignolles RER'],
         "girCodes": gir_by_line.get('315', []),
         "directions": [
@@ -363,7 +371,8 @@ lines_list = [
         "lineId": "316",
         "name": "316",
         "logoUrl": "/logos/316.png",
-        "color": "#D8232A",
+        "color": "#F51C28",  # couleur du logo
+        "textColor": "#FFFFFF",  # couleur du numéro sur le logo
         "spawnPoints": ['Rue de Cherbourg', 'Mairie de Narbérale', 'Cramain - Université RER'],
         "girCodes": gir_by_line.get('316', []),
         "directions": [
@@ -389,7 +398,8 @@ lines_list = [
         "lineId": "433",
         "name": "433",
         "logoUrl": "/logos/433.png",
-        "color": "#008249",
+        "color": "#00804C",  # couleur du logo
+        "textColor": "#FFFFFF",  # couleur du numéro sur le logo
         "spawnPoints": ['Narbérale RER'],
         "girCodes": gir_by_line.get('433', []),
         "directions": [
@@ -415,7 +425,8 @@ lines_list = [
         "lineId": "786",
         "name": "N76",
         "logoUrl": "/logos/N76.png",
-        "color": "#111827",
+        "color": "#F51C28",  # couleur du logo
+        "textColor": "#FFFFFF",  # couleur du numéro sur le logo
         "spawnPoints": ['Chaillot-Batignolles RER', 'Narbérale RER', 'Gare de Narbérale', 'Cramain - Université RER - République', 'Cramain - Université - République'],
         "girCodes": gir_by_line.get('N76', []),
         "directions": [

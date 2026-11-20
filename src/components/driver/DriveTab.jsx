@@ -1,4 +1,6 @@
 import React from 'react';
+import AutoAdvanceToggle from './AutoAdvanceToggle.jsx';
+import { formatSeconds } from '../../utils/time.js';
 import { ChevronLeft, Check, ArrowRight, Bus, User } from '@getpapillon/papicons';
 
 // Onglet « Conduite » du pupitre : compte à rebours, prochain arrêt, régulation
@@ -26,7 +28,13 @@ export default function DriveTab({ svc, handleFinishService, activeRoster, handl
     terminusNextStop,
     upcomingStops,
     activeLine,
+    autoAdvance,
+    goToStop,
+    secondsUntilStop,
   } = svc;
+
+  // Le mode auto passe à l'arrêt suivant 45 s après l'heure de passage
+  const autoNextIn = currentStop?.time ? secondsUntilStop(currentStop.time) + 45 : null;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -176,12 +184,13 @@ export default function DriveTab({ svc, handleFinishService, activeRoster, handl
               </div>
             </div>
 
-            <div className="pt-2 flex items-center space-x-3">
+            <div className="pt-2 flex items-center gap-3">
               <button
-                onClick={() => setCurrentStopIndex(prev => Math.max(0, prev - 1))}
+                onClick={() => goToStop(currentStopIndex - 1)}
                 disabled={currentStopIndex === 0}
                 className="bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white p-4 rounded-lg border border-white/10 active:scale-95 transition-all"
-                title="Arrêt précédent (Flèche gauche)"
+                title="Arrêt précédent (flèche gauche)"
+                aria-label="Arrêt précédent"
               >
                 <ChevronLeft size={22} className="shrink-0" />
               </button>
@@ -201,11 +210,30 @@ export default function DriveTab({ svc, handleFinishService, activeRoster, handl
                     <span>Terminer le service</span>
                   </button>
                 )
+              ) : autoAdvance ? (
+                <div className="flex-1 flex items-center justify-between gap-3 py-3 px-4 rounded-lg border border-sse-yellow/40 bg-sse-yellow/10">
+                  <span className="text-sm text-zinc-200 min-w-0">
+                    <span className="block font-semibold text-sse-yellow">Défilement automatique</span>
+                    <span className="block text-xs text-zinc-400 truncate">
+                      {autoNextIn !== null && autoNextIn > 0
+                        ? `Arrêt suivant dans ${formatSeconds(autoNextIn)}`
+                        : 'Passage à l’arrêt suivant…'}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => goToStop(currentStopIndex + 1)}
+                    className="shrink-0 px-3 py-2 rounded-md text-sm font-semibold text-white border border-white/20 hover:border-white"
+                    title="Passer l’arrêt et reprendre la main (flèche droite)"
+                  >
+                    Passer
+                  </button>
+                </div>
               ) : (
                 <button
-                  onClick={() => setCurrentStopIndex(prev => Math.min(activeTripStops.length - 1, prev + 1))}
+                  onClick={() => goToStop(currentStopIndex + 1)}
                   className="flex-1 py-4 px-5 rounded-lg font-bold text-sm bg-sse-yellow hover:bg-sse-yellow-hi text-sse-night flex items-center justify-center space-x-2 active:scale-[0.98] transition-all"
-                  title="Arrêt suivant (Flèche droite)"
+                  title="Arrêt suivant (flèche droite)"
                 >
                   <Check size={20} className="shrink-0" />
                   <span>Arrêt desservi</span>
@@ -279,6 +307,11 @@ export default function DriveTab({ svc, handleFinishService, activeRoster, handl
             )}
           </div>
         )}
+
+        {/* DÉFILEMENT AUTOMATIQUE */}
+        <div className="bg-sse-panel border border-white/5 rounded-xl p-4">
+          <AutoAdvanceToggle svc={svc} />
+        </div>
 
         {/* RÉGULATION CONDUCTEUR */}
         <div className="bg-sse-panel border border-white/5 rounded-xl p-4 flex items-center justify-between">
