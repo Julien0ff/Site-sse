@@ -32,10 +32,11 @@ export default function DriveTab({ svc, handleFinishService, activeRoster, handl
     goToStop,
     secondsUntilStop,
     firstStopIndex,
+    autoPassSeconds,
   } = svc;
 
-  // Le mode auto passe à l'arrêt suivant 45 s après l'heure de passage
-  const autoNextIn = currentStop?.time ? secondsUntilStop(currentStop.time) + 45 : null;
+  // Le mode auto passe à l'arrêt suivant peu après l'heure de passage
+  const autoNextIn = currentStop?.time ? secondsUntilStop(currentStop.time) + autoPassSeconds : null;
   // Part écoulée entre le passage précédent et le prochain (pour la barre du bouton)
   const prevStop = activeTripStops[currentStopIndex - 1];
   const autoProgress = (() => {

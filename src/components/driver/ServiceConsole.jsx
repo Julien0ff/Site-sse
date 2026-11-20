@@ -19,22 +19,36 @@ export default function ServiceConsole({ svc, busData, handleFinishService, acti
     activeLine,
   } = svc;
 
+  // Texte de la girouette : terminus de la page Conduite, ou terminus réel d'une course partielle
+  const isPartial = Boolean(selectedTrip?.isLimitedService);
+  const girouetteText = isPartial ? selectedTrip.destinationStop : selectedDirection.destination;
+  const lineColor = activeLine.color || '#DAE44E';
+
   return (
     <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-slide-up">
       
       {/* GIROUETTE : ce que les voyageurs lisent sur le bus */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
-        <div className="girouette flex items-stretch flex-1 min-w-0" aria-label={`Girouette : ${activeLine.name} ${(selectedTrip?.isLimitedService ? selectedTrip.destinationStop : selectedDirection.destination)}`}>
+        <div
+          className="girouette flex items-stretch flex-1 min-w-0"
+          aria-label={`Girouette : ${activeLine.name} ${girouetteText}${isPartial ? ' (service partiel)' : ''}`}
+        >
+          {/* Numéro de ligne sur sa couleur ; service partiel = bloc coupé en diagonale, comme en jeu */}
           <span
-            className="girouette-code flex items-center justify-center px-3 sm:px-4 text-[28px] sm:text-3xl shrink-0 min-w-[3.25rem]"
-            style={{ backgroundColor: activeLine.color || '#F3C318', color: activeLine.textColor || textOnLineColor(activeLine.color || '#F3C318') }}
+            className="girouette-code flex items-center justify-center px-3 sm:px-4 text-[30px] sm:text-[34px] shrink-0 min-w-[3.5rem]"
+            style={{
+              background: isPartial
+                ? `linear-gradient(to bottom right, ${lineColor} 50%, transparent 50%)`
+                : lineColor,
+              color: isPartial ? '#ffffff' : (activeLine.textColor || textOnLineColor(lineColor))
+            }}
           >
             {activeLine.name}
           </span>
-          {/* Mobile : texte plus grand, sur 2 lignes si besoin ; PC : une ligne */}
+          {/* Mobile : sur 2 lignes si besoin ; PC : une ligne */}
           <span className="flex items-center min-w-0 px-3 sm:px-4 py-2 sm:py-2.5">
-            <span className="girouette-text block min-w-0 text-[26px] leading-[1.05] sm:text-3xl sm:leading-normal line-clamp-2 sm:line-clamp-none sm:truncate">
-              {(selectedTrip?.isLimitedService ? selectedTrip.destinationStop : selectedDirection.destination)}
+            <span className="girouette-text block min-w-0 text-[28px] leading-[1.05] sm:text-[34px] sm:leading-tight line-clamp-2 sm:line-clamp-none sm:truncate">
+              {girouetteText}
             </span>
           </span>
         </div>

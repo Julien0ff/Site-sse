@@ -32,47 +32,48 @@
   }
 }
 
-/* Girouette : bandeau LED à points, le seul élément décoratif du site */
+/* Girouette : reproduit les afficheurs LED blancs du jeu (police Hanover en jeu,
+   Dosis ici : étroite et arrondie, la plus proche disponible librement) */
 .girouette {
   position: relative;
   background-color: #050208;
-  color: #F3C318;
+  color: #f4f6f8;
   border: 1px solid #000;
   border-radius: 6px;
-  box-shadow: inset 0 0 0 3px #1a1622;
-  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  box-shadow: inset 0 0 0 3px #15121c;
+  font-family: 'Dosis', 'Barlow Semi Condensed', sans-serif;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em;
   overflow: hidden;
 }
 
+/* Trame de points LED, sur tout l'afficheur y compris le bloc couleur */
 .girouette::after {
   content: '';
   position: absolute;
   inset: 0;
+  z-index: 2;
   pointer-events: none;
-  /* Trame de LED : plus fine et plus légère sur petit écran pour garder le texte lisible */
   background-image: radial-gradient(circle, transparent 0.8px, rgba(5, 2, 8, 0.45) 1.1px);
   background-size: 2px 2px;
 }
 
-/* Léger halo des LED : aide la lecture à travers la trame */
-.girouette-text {
-  text-shadow: 0 0 8px rgba(243, 195, 24, 0.35);
-}
-
 @media (min-width: 640px) {
   .girouette::after {
-    background-image: radial-gradient(circle, transparent 0.9px, rgba(5, 2, 8, 0.7) 1.3px);
+    background-image: radial-gradient(circle, transparent 1px, rgba(5, 2, 8, 0.6) 1.4px);
     background-size: 3px 3px;
   }
 }
 
 .girouette-code {
   position: relative;
-  z-index: 1;
-  letter-spacing: 0;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+}
+
+/* Léger halo des LED : aide la lecture à travers la trame */
+.girouette-text {
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
 }
 
 .custom-scrollbar::-webkit-scrollbar {

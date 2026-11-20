@@ -332,9 +332,10 @@ export function useDriverService({ busData, session, patch, effectiveClock, keyb
   }, [activeTripStops]);
 
   // --- Défilement automatique des arrêts ---
-  // Un arrêt est considéré desservi 45 s après son heure de passage (régulation
-  // comprise) : c'est le même seuil que l'indication « dépassé » du pupitre.
-  const AUTO_PASS_SECONDS = 45;
+  // En mode auto, un arrêt est considéré desservi 10 s après son heure de passage
+  // (régulation comprise), le temps de l'arrêt. Les arrêts étant souvent espacés
+  // d'une minute, il reste ~50 s vers le suivant (avec 45 s, il n'en restait que 15).
+  const AUTO_PASS_SECONDS = 10;
   const autoAdvance = Boolean(session.autoAdvance);
   const setAutoAdvance = (value) => patch({ autoAdvance: Boolean(value) });
 
@@ -435,6 +436,6 @@ export function useDriverService({ busData, session, patch, effectiveClock, keyb
     departureAnalysis, isInService, currentStop, nextStopCountdown,
     getAdjustedStopTime, getMinutesFromNow, terminusNextStop, upcomingStops,
     activeLine,
-    autoAdvance, setAutoAdvance, scheduledStopIndex, secondsUntilStop, goToStop, firstStopIndex
+    autoAdvance, setAutoAdvance, scheduledStopIndex, autoPassSeconds: AUTO_PASS_SECONDS, secondsUntilStop, goToStop, firstStopIndex
   };
 }
