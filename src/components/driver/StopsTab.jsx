@@ -26,6 +26,7 @@ export default function StopsTab({ svc }) {
     goToStop,
     secondsUntilStop,
     autoAdvance,
+    firstStopIndex,
   } = svc;
 
   const listRef = useRef(null);
@@ -106,7 +107,7 @@ export default function StopsTab({ svc }) {
               <button
                 type="button"
                 onClick={() => goToStop(currentStopIndex - 1)}
-                disabled={currentStopIndex === 0}
+                disabled={currentStopIndex <= firstStopIndex}
                 className="flex-1 flex items-center justify-center gap-1 py-2.5 rounded-md border border-white/15 text-sm font-semibold text-white hover:border-white disabled:opacity-30"
               >
                 <ChevronLeft size={16} /> Précédent

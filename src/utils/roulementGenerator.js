@@ -124,7 +124,8 @@ export function generateRandomRoulement(busData, options = {}) {
   for (const line of lines) {
     if (startLineName && line.name !== startLineName) continue;
     for (const dir of line.directions) {
-      const hub = originHub(dir);
+      // Ligne avec prise de service en ligne (ex. 316) : c'est cet arrêt que dessert le dépôt
+      const hub = dir.serviceStart ? getTerminusHub(dir.serviceStart) : originHub(dir);
       const fromDepot = allowedHubs.includes(hub);
       if (depotFilter === 'courcelles' && !fromDepot) continue;
       const nt = nextTrip(sheets[dir.sheetKey], firstAfter);
@@ -248,6 +249,26 @@ export function generateRandomRoulement(busData, options = {}) {
     });
     currentLine = chosen.line;
     currentDir = chosen.dir;
+  }
+
+  // Première course prise en ligne (ex. 316 : Cramain - Université RER) :
+  // on démarre à cet arrêt, à son heure de passage
+  if (start.dir.serviceStart) {
+    const trip = start.nt.trip;
+    const i = trip.stops.findIndex(st => st.stop === start.dir.serviceStart);
+    if (i > 0 && i < trip.stops.length - 1) {
+      let offset = toMin(trip.stops[i].time) - toMin(trip.departureTime);
+      if (offset < 0) offset += DAY;
+      Object.assign(steps[0], {
+        origin: start.dir.serviceStart,
+        spawnStop: start.dir.serviceStart,
+        departureTime: trip.stops[i].time,
+        depAbs: steps[0].depAbs + offset,
+        durationMinutes: steps[0].durationMinutes - offset,
+        stopsCount: trip.stops.length - i,
+        viaStops: viaStops({ stops: trip.stops.slice(i) })
+      });
+    }
   }
 
   const first = steps[0];

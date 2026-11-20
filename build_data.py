@@ -434,17 +434,17 @@ lines_list = [
                 "dirId": "786_BOIS",
                 "code": "786BRP",
                 "sheetKey": "786_BOIS",
-                "destination": "Rosenberg (Berthée)",
+                "destination": "Berthée - Rosenberg",
                 "origin": "Chaillot-Batignolles RER",
-                "status": "En jeu : Chaillot ⥋ Rosenberg"
+                "status": "En jeu : Chaillot ⥋ Berthée - Rosenberg"
             },
             {
                 "dirId": "786_PLES",
                 "code": "786RB",
                 "sheetKey": "786_PLES",
                 "destination": "Chaillot-Batignolles RER",
-                "origin": "Rosenberg (Berthée)",
-                "status": "En jeu : Chaillot ⥋ Rosenberg"
+                "origin": "Berthée - Rosenberg",
+                "status": "En jeu : Chaillot ⥋ Berthée - Rosenberg"
             }
         ]
     }

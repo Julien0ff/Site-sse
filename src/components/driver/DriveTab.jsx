@@ -31,10 +31,19 @@ export default function DriveTab({ svc, handleFinishService, activeRoster, handl
     autoAdvance,
     goToStop,
     secondsUntilStop,
+    firstStopIndex,
   } = svc;
 
   // Le mode auto passe à l'arrêt suivant 45 s après l'heure de passage
   const autoNextIn = currentStop?.time ? secondsUntilStop(currentStop.time) + 45 : null;
+  // Part écoulée entre le passage précédent et le prochain (pour la barre du bouton)
+  const prevStop = activeTripStops[currentStopIndex - 1];
+  const autoProgress = (() => {
+    if (autoNextIn === null || !prevStop?.time) return 0;
+    const span = secondsUntilStop(currentStop.time) - secondsUntilStop(prevStop.time);
+    if (span <= 0) return 1;
+    return Math.min(1, Math.max(0, 1 - autoNextIn / span));
+  })();
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -187,7 +196,7 @@ export default function DriveTab({ svc, handleFinishService, activeRoster, handl
             <div className="pt-2 flex items-center gap-3">
               <button
                 onClick={() => goToStop(currentStopIndex - 1)}
-                disabled={currentStopIndex === 0}
+                disabled={currentStopIndex <= firstStopIndex}
                 className="bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white p-4 rounded-lg border border-white/10 active:scale-95 transition-all"
                 title="Arrêt précédent (flèche gauche)"
                 aria-label="Arrêt précédent"
@@ -210,36 +219,35 @@ export default function DriveTab({ svc, handleFinishService, activeRoster, handl
                     <span>Terminer le service</span>
                   </button>
                 )
-              ) : autoAdvance ? (
-                <div className="flex-1 flex items-center justify-between gap-3 py-3 px-4 rounded-lg border border-sse-yellow/40 bg-sse-yellow/10">
-                  <span className="text-sm text-zinc-200 min-w-0">
-                    <span className="block font-semibold text-sse-yellow">Défilement automatique</span>
-                    <span className="block text-xs text-zinc-400 truncate">
-                      {autoNextIn !== null && autoNextIn > 0
-                        ? `Arrêt suivant dans ${formatSeconds(autoNextIn)}`
-                        : 'Passage à l’arrêt suivant…'}
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => goToStop(currentStopIndex + 1)}
-                    className="shrink-0 px-3 py-2 rounded-md text-sm font-semibold text-white border border-white/20 hover:border-white"
-                    title="Passer l’arrêt et reprendre la main (flèche droite)"
-                  >
-                    Passer
-                  </button>
-                </div>
               ) : (
                 <button
                   onClick={() => goToStop(currentStopIndex + 1)}
-                  className="flex-1 py-4 px-5 rounded-lg font-bold text-sm bg-sse-yellow hover:bg-sse-yellow-hi text-sse-night flex items-center justify-center space-x-2 active:scale-[0.98] transition-all"
+                  className="relative overflow-hidden flex-1 py-4 px-5 rounded-lg font-bold text-sm bg-sse-yellow hover:bg-sse-yellow-hi text-sse-night flex items-center justify-center space-x-2 active:scale-[0.98] transition-all"
                   title="Arrêt suivant (flèche droite)"
                 >
-                  <Check size={20} className="shrink-0" />
-                  <span>Arrêt desservi</span>
+                  {/* Mode auto : se remplit jusqu'au passage automatique à l'arrêt suivant */}
+                  {autoAdvance && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-y-0 left-0 bg-sse-night/15 transition-[width] duration-1000 ease-linear"
+                      style={{ width: `${autoProgress * 100}%` }}
+                    />
+                  )}
+                  <Check size={20} className="relative shrink-0" />
+                  <span className="relative">Arrêt desservi</span>
                 </button>
               )}
             </div>
+
+            {autoAdvance && !currentStop?.isLast && (
+              <p className="text-sm text-zinc-400 text-center -mt-1" aria-live="polite">
+                <span className="text-sse-yellow font-semibold">Auto</span>
+                {' : '}
+                {autoNextIn !== null && autoNextIn > 0
+                  ? `arrêt suivant dans ${formatSeconds(autoNextIn)}`
+                  : 'passage à l’arrêt suivant…'}
+              </p>
+            )}
 
             {/* Félicitations et actions après clôture de service */}
             {serviceCompleted && (
@@ -264,7 +272,8 @@ export default function DriveTab({ svc, handleFinishService, activeRoster, handl
                               lineName: nextRosterStep.lineName,
                               dirId: nextRosterStep.dirId,
                               departureTime: nextRosterStep.departureTime,
-                              rosterStepNumber: nextRosterStep.stepNumber
+                              rosterStepNumber: nextRosterStep.stepNumber,
+                            spawnStop: nextRosterStep.spawnStop || null
                             })
                           }
                           className="px-3.5 py-2 rounded-md bg-sse-yellow text-sse-night hover:bg-sse-yellow-hi text-xs font-bold transition-all flex items-center space-x-1.5"
@@ -434,7 +443,7 @@ export default function DriveTab({ svc, handleFinishService, activeRoster, handl
             </div>
             <div className="flex justify-between py-1 border-b border-white/5">
               <span className="text-zinc-400">Terminus</span>
-              <span className="font-bold text-sse-yellow text-right">{selectedTrip?.destinationStop || selectedDirection.destination}</span>
+              <span className="font-bold text-sse-yellow text-right">{selectedTrip?.isLimitedService ? selectedTrip.destinationStop : selectedDirection.destination}</span>
             </div>
             <div className="flex justify-between py-1 border-b border-white/5">
               <span className="text-zinc-400">Arrêts au service</span>

@@ -13,18 +13,26 @@ function useNextDepartures(busData, effectiveClock, limit = 7) {
     const rows = [];
     for (const line of busData.lines) {
       for (const dir of line.directions) {
-        const trips = busData.sheets?.[dir.sheetKey]?.trips || [];
+        // Départ à l'arrêt de prise de service (ex. 316 : Cramain - Université RER)
+        const trips = (busData.sheets?.[dir.sheetKey]?.trips || [])
+          .map(t => {
+            if (!dir.serviceStart) return { trip: t, from: t.originStop, time: t.departureTime };
+            const i = t.stops.findIndex(s => s.stop === dir.serviceStart);
+            if (i < 0 || i === t.stops.length - 1) return null;
+            return { trip: t, from: dir.serviceStart, time: t.stops[i].time };
+          })
+          .filter(Boolean);
         if (!trips.length) continue;
         // Après minuit on repart sur les premiers départs du lendemain
-        let trip = trips.find(t => toMin(t.departureTime) >= nowMin);
+        let next = trips.find(t => toMin(t.time) >= nowMin);
         let wait;
-        if (trip) {
-          wait = toMin(trip.departureTime) - nowMin;
+        if (next) {
+          wait = toMin(next.time) - nowMin;
         } else {
-          trip = trips[0];
-          wait = toMin(trip.departureTime) + 1440 - nowMin;
+          next = trips[0];
+          wait = toMin(next.time) + 1440 - nowMin;
         }
-        rows.push({ line, dir, trip, wait });
+        rows.push({ line, dir, trip: next.trip, from: next.from, time: next.time, wait });
       }
     }
     return rows.sort((a, b) => a.wait - b.wait).slice(0, limit);
@@ -94,7 +102,8 @@ export default function WelcomeView({ busData, effectiveClock, onSelectMode, onL
                       lineName: nextRosterStep.lineName,
                       dirId: nextRosterStep.dirId,
                       departureTime: nextRosterStep.departureTime,
-                      rosterStepNumber: nextRosterStep.stepNumber
+                      rosterStepNumber: nextRosterStep.stepNumber,
+                      spawnStop: nextRosterStep.spawnStop || null
                     })}
                     className="px-3.5 py-2 rounded-md bg-sse-night text-white text-sm font-semibold hover:bg-sse-deep"
                   >
@@ -155,20 +164,20 @@ export default function WelcomeView({ busData, effectiveClock, onSelectMode, onL
           </div>
 
           <ol className="rounded-xl overflow-hidden border border-sse-line divide-y divide-sse-line bg-sse-panel">
-            {departures.map(({ line, dir, trip, wait }) => (
+            {departures.map(({ line, dir, trip, from, time, wait }) => (
               <li key={dir.dirId}>
                 <button
                   type="button"
-                  onClick={() => onLaunchService({ lineName: line.name, dirId: dir.dirId, departureTime: trip.departureTime })}
+                  onClick={() => onLaunchService({ lineName: line.name, dirId: dir.dirId, departureTime: time, spawnStop: from })}
                   className="w-full grid grid-cols-[auto_1fr_auto] items-center gap-3 sm:gap-4 pl-0 pr-4 py-3 text-left hover:bg-sse-raised transition-colors"
                 >
                   <img src={line.logoUrl} alt={`Ligne ${line.name}`} className="h-7 w-14 object-contain ml-4" />
                   <span className="min-w-0">
                     <span className="block font-sign font-bold text-lg leading-tight text-white truncate">
-                      {trip.destinationStop || dir.destination}
+                      {trip.isLimitedService ? trip.destinationStop : dir.destination}
                     </span>
                     <span className="block text-xs text-zinc-400 truncate">
-                      depuis {trip.originStop}
+                      depuis {from === busData.sheets?.[dir.sheetKey]?.fullOrigin ? dir.origin : from}
                       {trip.isLimitedService && <span className="text-amber-300"> · service partiel</span>}
                     </span>
                   </span>
@@ -176,7 +185,7 @@ export default function WelcomeView({ busData, effectiveClock, onSelectMode, onL
                     <span className={`block font-sign font-bold text-lg leading-tight ${wait <= 2 ? 'text-sse-yellow' : 'text-white'}`}>
                       {formatWait(wait)}
                     </span>
-                    <span className="block font-mono text-xs text-zinc-400">{trip.departureTime}</span>
+                    <span className="block font-mono text-xs text-zinc-400">{time}</span>
                   </span>
                 </button>
               </li>

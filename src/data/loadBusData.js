@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { expandBusData } from './busDataCodec.js';
+import { applyInGameRoutes } from './inGameRoutes.js';
 
 // Les fiches horaires (le plus gros du site) sont chargées à part, après
 // l'affichage de la page, au lieu d'être dans le bundle principal.
@@ -8,7 +9,7 @@ let pending = null;
 export function loadBusData() {
   if (!pending) {
     pending = import('virtual:bus-data')
-      .then(mod => expandBusData(mod.default))
+      .then(mod => applyInGameRoutes(expandBusData(mod.default)))
       .catch(err => {
         pending = null; // permettre un nouvel essai
         throw err;

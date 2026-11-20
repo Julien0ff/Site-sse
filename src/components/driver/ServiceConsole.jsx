@@ -24,7 +24,7 @@ export default function ServiceConsole({ svc, busData, handleFinishService, acti
       
       {/* GIROUETTE : ce que les voyageurs lisent sur le bus */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
-        <div className="girouette flex items-stretch flex-1 min-w-0" aria-label={`Girouette : ${activeLine.name} ${selectedTrip?.destinationStop || selectedDirection.destination}`}>
+        <div className="girouette flex items-stretch flex-1 min-w-0" aria-label={`Girouette : ${activeLine.name} ${(selectedTrip?.isLimitedService ? selectedTrip.destinationStop : selectedDirection.destination)}`}>
           <span
             className="girouette-code flex items-center px-3 sm:px-4 text-2xl sm:text-3xl shrink-0"
             style={{ backgroundColor: activeLine.color || '#F3C318', color: activeLine.textColor || textOnLineColor(activeLine.color || '#F3C318') }}
@@ -32,7 +32,7 @@ export default function ServiceConsole({ svc, busData, handleFinishService, acti
             {activeLine.name}
           </span>
           <span className="flex items-center px-3 sm:px-4 py-2.5 text-xl sm:text-3xl truncate">
-            {selectedTrip?.destinationStop || selectedDirection.destination}
+            {(selectedTrip?.isLimitedService ? selectedTrip.destinationStop : selectedDirection.destination)}
           </span>
         </div>
 

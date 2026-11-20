@@ -235,7 +235,8 @@ export default function RoulementView({ busData, activeRoster, setActiveRoster, 
                     lineName: nextStep.lineName,
                     dirId: nextStep.dirId,
                     departureTime: nextStep.departureTime,
-                    rosterStepNumber: nextStep.stepNumber
+                    rosterStepNumber: nextStep.stepNumber,
+                    spawnStop: nextStep.spawnStop || null
                   })}
                   className="w-full bg-sse-yellow hover:bg-sse-yellow-hi active:scale-[0.98] text-sse-night px-4 py-3 rounded-lg font-bold text-xs flex items-center justify-center space-x-2 transition-all"
                 >
@@ -592,7 +593,8 @@ export default function RoulementView({ busData, activeRoster, setActiveRoster, 
                                     lineName: step.lineName,
                                     dirId: step.dirId,
                                     departureTime: step.departureTime,
-                                    rosterStepNumber: step.stepNumber
+                                    rosterStepNumber: step.stepNumber,
+                                    spawnStop: step.spawnStop || null
                                   })}
                                   className={`px-4 py-2.5 rounded-md font-bold text-sm flex items-center space-x-1.5 transition-all active:scale-95 ${
                                     isCurrent

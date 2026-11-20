@@ -39,9 +39,13 @@ export function useDriverService({ busData, session, patch, effectiveClock, keyb
   const setServiceCompleted = (value) => patch({ completed: value });
 
   // Changer de direction repart du terminus d'origine, sans départ forcé
+  // Point de prise de service par défaut : celui de la ligne (ex. 316 à
+  // Cramain - Université RER), sinon le terminus de départ
+  const defaultSpawnStop = (dir) => dir.serviceStart || data.sheets?.[dir.sheetKey]?.fullOrigin || '';
+
   const setSelectedDirection = (dir) => patch({
     dirId: dir.dirId,
-    spawnStop: data.sheets?.[dir.sheetKey]?.fullOrigin || '',
+    spawnStop: defaultSpawnStop(dir),
     forceDeparted: false,
     completed: false,
     lastAutoChecked: null,
@@ -62,14 +66,16 @@ export function useDriverService({ busData, session, patch, effectiveClock, keyb
   }));
 
   // Lancer directement un service (accueil, feuille de route)
-  const launchService = ({ dirId, departureTime: depTime, rosterStepNumber = null }) => {
+  const launchService = ({ dirId, departureTime: depTime, rosterStepNumber = null, spawnStop = null }) => {
     const dir = data.lines.flatMap(l => l.directions).find(d => d.dirId === dirId);
     if (!dir) return false;
     patch({
       step: 'service',
       tab: 'conduite',
       dirId: dir.dirId,
-      spawnStop: data.sheets?.[dir.sheetKey]?.fullOrigin || '',
+      // Depuis une feuille de route : l'arrêt indiqué, sinon le terminus (les
+      // horaires des courses suivantes sont ceux du terminus)
+      spawnStop: spawnStop || data.sheets?.[dir.sheetKey]?.fullOrigin || '',
       departureTime: depTime,
       stopIndex: 0,
       delay: 0,
@@ -351,17 +357,24 @@ export function useDriverService({ busData, session, patch, effectiveClock, keyb
     return idx < 0 ? activeTripStops.length - 1 : idx;
   }, [activeTripStops, effectiveClock, delayMinutes]);
 
-  useEffect(() => {
-    if (!autoAdvance || step !== 'service' || !isInService || serviceCompleted) return;
-    // Départ forcé en avance : on reste au départ tant que la fiche ne fait pas avancer
-    if (scheduledStopIndex !== currentStopIndex) patch({ stopIndex: scheduledStopIndex });
-  }, [autoAdvance, step, isInService, serviceCompleted, scheduledStopIndex, currentStopIndex]);
+  // Une fois parti, le terminus de départ est desservi : le prochain arrêt est le 2e
+  // (c'est déjà celui qu'annonce le pupitre avant le départ)
+  const firstStopIndex = activeTripStops.length > 1 ? 1 : 0;
 
-  // Avance / recul manuels : reprennent la main sur le mode automatique
-  const goToStop = (index) => patch({
-    stopIndex: Math.max(0, Math.min(activeTripStops.length - 1, index)),
-    autoAdvance: false
-  });
+  useEffect(() => {
+    if (step !== 'service' || !isInService || serviceCompleted) return;
+    let target = Math.max(currentStopIndex, firstStopIndex);
+    // Le mode auto ne fait qu'avancer : si le conducteur est en avance, il attend
+    // que la fiche horaire le rattrape
+    if (autoAdvance) target = Math.max(target, scheduledStopIndex);
+    if (target !== currentStopIndex) patch({ stopIndex: target });
+  }, [autoAdvance, step, isInService, serviceCompleted, scheduledStopIndex, currentStopIndex, firstStopIndex]);
+
+  // Avancer garde le mode auto ; reculer le coupe (sinon il ramènerait aussitôt en avant)
+  const goToStop = (index) => {
+    const next = Math.max(firstStopIndex, Math.min(activeTripStops.length - 1, index));
+    patch(s => (next < s.stopIndex ? { stopIndex: next, autoAdvance: false } : { stopIndex: next }));
+  };
 
   // Raccourcis clavier (Flèche Droite / Gauche) au pupitre
   useEffect(() => {
@@ -370,10 +383,10 @@ export function useDriverService({ busData, session, patch, effectiveClock, keyb
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target?.tagName)) return;
       if (e.key === 'ArrowRight') {
         e.preventDefault();
-        patch(s => ({ stopIndex: Math.min(activeTripStops.length - 1, s.stopIndex + 1), autoAdvance: false }));
+        patch(s => ({ stopIndex: Math.min(activeTripStops.length - 1, s.stopIndex + 1) }));
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        patch(s => ({ stopIndex: Math.max(0, s.stopIndex - 1), autoAdvance: false }));
+        patch(s => (s.stopIndex > firstStopIndex ? { stopIndex: s.stopIndex - 1, autoAdvance: false } : null));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -419,6 +432,6 @@ export function useDriverService({ busData, session, patch, effectiveClock, keyb
     departureAnalysis, isInService, currentStop, nextStopCountdown,
     getAdjustedStopTime, getMinutesFromNow, terminusNextStop, upcomingStops,
     activeLine,
-    autoAdvance, setAutoAdvance, scheduledStopIndex, secondsUntilStop, goToStop
+    autoAdvance, setAutoAdvance, scheduledStopIndex, secondsUntilStop, goToStop, firstStopIndex
   };
 }

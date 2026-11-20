@@ -67,8 +67,8 @@ export default function App() {
   };
 
   // Lancement d'un service depuis l'accueil ou la feuille de route
-  const handleLaunchServiceFromRoster = ({ dirId, departureTime, rosterStepNumber = null }) => {
-    if (svc.launchService({ dirId, departureTime, rosterStepNumber })) {
+  const handleLaunchServiceFromRoster = ({ dirId, departureTime, rosterStepNumber = null, spawnStop = null }) => {
+    if (svc.launchService({ dirId, departureTime, rosterStepNumber, spawnStop })) {
       changeAppMode('conducteur');
     }
   };
