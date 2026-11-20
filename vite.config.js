@@ -2,6 +2,30 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { processUserSyncRequest } from './api/user-sync.js'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { compactBusData } from './src/data/busDataCodec.js'
+
+// Sert les fiches horaires sous forme compacte (module « virtual:bus-data »).
+// L'application les décompresse au chargement avec expandBusData().
+function compactBusDataPlugin() {
+  const VIRTUAL_ID = 'virtual:bus-data'
+  const RESOLVED_ID = '\0' + VIRTUAL_ID
+  const sourcePath = fileURLToPath(new URL('./src/data/busData.json', import.meta.url))
+  return {
+    name: 'compact-bus-data',
+    resolveId(id) {
+      if (id === VIRTUAL_ID) return RESOLVED_ID
+    },
+    load(id) {
+      if (id !== RESOLVED_ID) return
+      this.addWatchFile(sourcePath)
+      const compact = compactBusData(JSON.parse(readFileSync(sourcePath, 'utf8')))
+      // JSON.parse d'une chaîne est bien plus rapide à analyser qu'un gros littéral objet
+      return `export default JSON.parse(${JSON.stringify(JSON.stringify(compact))})`
+    }
+  }
+}
 
 function discordOAuthDevMiddleware(env) {
   return {
@@ -113,6 +137,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
+      compactBusDataPlugin(),
       discordOAuthDevMiddleware(env),
       VitePWA({
         registerType: 'autoUpdate',

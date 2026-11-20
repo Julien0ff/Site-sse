@@ -172,6 +172,10 @@ export function recordCompletedService(service) {
     const stopsCount = Number(service.stopCount || service.stopsCount || 15);
     const durationMinutes = Number(service.durationMinutes || 22);
 
+    // Lire l'historique AVANT d'incrémenter les stats : sinon getServiceHistory()
+    // voit plus de services comptés que d'entrées et ajoute une entrée fantôme.
+    const history = getServiceHistory();
+
     // 1. Mettre à jour les stats locales
     const stats = getDriverStats();
     stats.tripsCompleted += 1;
@@ -185,7 +189,6 @@ export function recordCompletedService(service) {
     localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
 
     // 2. Ajouter à l'historique avec identifiant unique de synchronisation multi-appareils
-    const history = getServiceHistory();
     const newEntry = {
       id: nowId,
       syncId: `id_${nowId}_${service.lineName || ''}_${service.departureTime || ''}`,
