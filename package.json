@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@getpapillon/papicons": "^0.2.3",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.9.0",
     "firebase": "^11.4.0",
     "lucide-react": "^1.16.0",
