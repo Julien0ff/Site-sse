@@ -58,7 +58,19 @@ function computeStatsFromHistory(historyList) {
   return stats;
 }
 
-function mergeRosters(cloudRoster, clientRoster) {
+// Date de création d'une feuille (horloge de l'appareil qui l'a générée).
+// On ne se fie pas à updatedAt : il est réécrit à chaque stockage/synchro.
+function rosterCreatedAt(roster) {
+  return new Date(roster?.createdAt || 0).getTime() || 0;
+}
+
+// Fusion de la feuille de route active entre le cloud et l'appareil.
+// `clearedAt` : dernière suppression volontaire (tous appareils confondus).
+// Toute feuille créée avant cette date est considérée comme supprimée.
+export function mergeRosters(cloudRoster, clientRoster, clearedAt = 0) {
+  if (cloudRoster && rosterCreatedAt(cloudRoster) <= clearedAt) cloudRoster = null;
+  if (clientRoster && rosterCreatedAt(clientRoster) <= clearedAt) clientRoster = null;
+
   if (!cloudRoster && !clientRoster) return null;
   if (!cloudRoster) return clientRoster;
   if (!clientRoster) return cloudRoster;
@@ -80,19 +92,21 @@ function mergeRosters(cloudRoster, clientRoster) {
       };
     });
     const completedSteps = mergedSteps.filter(s => s.isCompleted).length;
+    const updatedAt = Math.max(
+      new Date(cloudRoster.updatedAt || 0).getTime() || 0,
+      new Date(clientRoster.updatedAt || 0).getTime() || 0
+    );
     return {
       ...cloudRoster,
       ...clientRoster,
       steps: mergedSteps,
       completedSteps,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date(updatedAt || Date.now()).toISOString()
     };
   }
 
-  // Feuilles différentes : conserver la plus récente
-  const cloudTime = new Date(cloudRoster.updatedAt || cloudRoster.createdAt || 0).getTime();
-  const clientTime = new Date(clientRoster.updatedAt || clientRoster.createdAt || 0).getTime();
-  return clientTime >= cloudTime ? clientRoster : cloudRoster;
+  // Feuilles différentes : conserver la plus récemment générée
+  return rosterCreatedAt(clientRoster) >= rosterCreatedAt(cloudRoster) ? clientRoster : cloudRoster;
 }
 
 async function readCloudDriverDoc(userId, token) {
@@ -172,6 +186,7 @@ export async function processUserSyncRequest({ method, query, body, token }) {
       stats: emptyStats,
       history: [],
       activeRoster: payload.activeRoster || null,
+      rosterClearedAt: Number(payload.rosterClearedAt) || 0,
       resetAt: Date.now(),
       updatedAt: new Date().toISOString()
     };
@@ -229,7 +244,8 @@ export async function processUserSyncRequest({ method, query, body, token }) {
     .slice(0, 200);
 
   const mergedStats = computeStatsFromHistory(mergedHistory);
-  const mergedRoster = mergeRosters(existingDoc?.activeRoster || null, payload.activeRoster || null);
+  const rosterClearedAt = Math.max(Number(existingDoc?.rosterClearedAt) || 0, Number(payload.rosterClearedAt) || 0);
+  const mergedRoster = mergeRosters(existingDoc?.activeRoster || null, payload.activeRoster || null, rosterClearedAt);
 
   const mergedProfile = {
     ...(existingDoc?.profile || {}),
@@ -242,6 +258,7 @@ export async function processUserSyncRequest({ method, query, body, token }) {
     stats: mergedStats,
     history: mergedHistory,
     activeRoster: mergedRoster,
+    rosterClearedAt,
     resetAt: cloudResetAt,
     updatedAt: new Date().toISOString()
   };

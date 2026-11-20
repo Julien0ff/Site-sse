@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   ACTIVE_ROUTER: 'sse_active_roulement',
   SAVED_ROUTERS: 'sse_saved_roulements',
   APP_MODE: 'sse_app_mode',
+  ROSTER_CLEARED_AT: 'sse_roster_cleared_at',
   DEVICE_ID: 'sse_device_id'
 };
 
@@ -232,6 +233,25 @@ export function getDriverRank(tripsCount) {
 }
 
 // --- FEUILLE DE ROUTE (ROULEMENTS) ---
+
+// Date de la dernière suppression volontaire de la feuille de route. Envoyée
+// au cloud pour que la feuille supprimée ne revienne pas à la synchro suivante.
+export function getRosterClearedAt() {
+  try {
+    return Number(localStorage.getItem(STORAGE_KEYS.ROSTER_CLEARED_AT)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function markRosterCleared(at = Date.now()) {
+  try {
+    const next = Math.max(getRosterClearedAt(), Number(at) || 0);
+    localStorage.setItem(STORAGE_KEYS.ROSTER_CLEARED_AT, String(next));
+  } catch {
+    // stockage indisponible
+  }
+}
 
 export function getStoredActiveRoster() {
   try {

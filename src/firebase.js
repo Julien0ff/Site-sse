@@ -19,7 +19,9 @@ import {
   setServiceHistory,
   getStoredActiveRoster,
   setStoredActiveRoster,
-  getDeviceId
+  getDeviceId,
+  getRosterClearedAt,
+  markRosterCleared
 } from './utils/storageUtils.js';
 
 const FIREBASE_CONFIG = {
@@ -58,6 +60,13 @@ export function isFirebaseReady() {
   return true;
 }
 
+// Identifie une version de feuille de route (sans updatedAt, réécrit à chaque stockage)
+function rosterSignature(roster) {
+  if (!roster) return 'none';
+  const done = (roster.steps || []).filter(s => s.isCompleted).map(s => s.stepNumber).join(',');
+  return `${roster.id}|${done}`;
+}
+
 async function callSyncApi(url, options) {
   const res = await fetch(url, options);
   if (!res.ok) {
@@ -89,10 +98,13 @@ export async function syncUserWithCloud({
     stats: stats || getDriverStats(),
     history: history || getServiceHistory(),
     activeRoster: activeRoster !== undefined ? activeRoster : getStoredActiveRoster(),
+    rosterClearedAt: getRosterClearedAt(),
     deviceId: getDeviceId(),
     action,
     forceMerge
   };
+
+  const sentRosterSignature = rosterSignature(payload.activeRoster);
 
   const fetchOpts = {
     method: 'POST',
@@ -114,7 +126,15 @@ export async function syncUserWithCloud({
   if (data && data.ok) {
     if (data.stats) setDriverStats(data.stats);
     if (Array.isArray(data.history)) setServiceHistory(data.history);
-    if (data.activeRoster !== undefined) setStoredActiveRoster(data.activeRoster);
+    if (data.rosterClearedAt) markRosterCleared(data.rosterClearedAt);
+
+    // Réponse périmée : la feuille a été générée, supprimée ou cochée pendant la
+    // requête. On garde la version locale, la prochaine synchro l'enverra.
+    if (rosterSignature(getStoredActiveRoster()) !== sentRosterSignature) {
+      data = { ...data, activeRoster: undefined };
+    } else if (data.activeRoster !== undefined) {
+      setStoredActiveRoster(data.activeRoster);
+    }
   }
 
   // Synchronisation Firestore additionnelle si configurée

@@ -5,7 +5,8 @@ import {
   getStoredUser, setStoredUser,
   getDriverStats, recordCompletedService,
   getServiceHistory, clearServiceHistory,
-  getStoredActiveRoster, setStoredActiveRoster
+  getStoredActiveRoster, setStoredActiveRoster,
+  markRosterCleared
 } from '../utils/storageUtils.js';
 
 // Profil conducteur : compte Discord, statistiques, historique, feuille de
@@ -104,6 +105,8 @@ export function useDriverProfile({ isProfileOpen }) {
 
   // Mise à jour de la feuille de route depuis la vue Feuille de route
   const setActiveRoster = (nextRoster) => {
+    // Suppression volontaire : mémorisée pour que le cloud ne la renvoie pas
+    if (!nextRoster) markRosterCleared();
     setActiveRosterState(nextRoster);
     if (user?.id) performCloudSync(user, { activeRoster: nextRoster });
   };
