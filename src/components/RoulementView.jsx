@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { List, Check, Bus, ArrowRight, Clock, MapPin, Home } from '@getpapillon/papicons';
 import { generateRandomRoulement } from '../utils/roulementGenerator.js';
+import { IN_GAME_ROUTES } from '../data/inGameRoutes.js';
 import { setStoredActiveRoster } from '../utils/storageUtils.js';
 
 function Segmented({ label, value, onChange, options }) {
@@ -51,9 +52,14 @@ export default function RoulementView({ busData, activeRoster, setActiveRoster, 
   const [showMobileFilters, setShowMobileFilters] = useState(!activeRoster);
   const [error, setError] = useState('');
 
-  // Les anciennes feuilles (format incompatible) sont supprimées
+  // Feuilles supprimées automatiquement :
+  //  - format < 3 : incompatible
+  //  - format < 4 utilisant une ligne à terminus provisoire : horaires calculés
+  //    sur la fiche complète (ex. 149 au départ d'Église du Petit-Passy)
   useEffect(() => {
-    if (activeRoster && (activeRoster.version || 0) < 3) {
+    const version = activeRoster?.version || 0;
+    const usesClippedLine = activeRoster?.steps?.some(st => IN_GAME_ROUTES[st.dirId]);
+    if (activeRoster && (version < 3 || (version < 4 && usesClippedLine))) {
       setActiveRoster(null);
       setStoredActiveRoster(null);
       setShowMobileFilters(true);

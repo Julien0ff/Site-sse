@@ -8,6 +8,7 @@ import {
   getStoredActiveRoster, setStoredActiveRoster,
   markRosterCleared
 } from '../utils/storageUtils.js';
+import { IN_GAME_ROUTES } from '../data/inGameRoutes.js';
 
 // Profil conducteur : compte Discord, statistiques, historique, feuille de
 // route active, et synchronisation cloud entre appareils.
@@ -110,6 +111,16 @@ export function useDriverProfile({ isProfileOpen }) {
     setActiveRosterState(nextRoster);
     if (user?.id) performCloudSync(user, { activeRoster: nextRoster });
   };
+
+  // Feuille générée avant le découpage des parcours en jeu (format < 4) sur une
+  // ligne à terminus provisoire : ses horaires sont faux, on la retire partout
+  useEffect(() => {
+    const version = activeRoster?.version || 0;
+    if (activeRoster && version < 4 && activeRoster.steps?.some(st => IN_GAME_ROUTES[st.dirId])) {
+      setActiveRoster(null);
+      setStoredActiveRoster(null);
+    }
+  }, [activeRoster]);
 
   // Enregistre un service terminé et coche la course correspondante sur la
   // feuille de route. Renvoie le n° de course cochée (ou null).

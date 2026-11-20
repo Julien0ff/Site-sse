@@ -52,8 +52,21 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: radial-gradient(circle, transparent 0.9px, rgba(5, 2, 8, 0.78) 1.3px);
-  background-size: 3px 3px;
+  /* Trame de LED : plus fine et plus légère sur petit écran pour garder le texte lisible */
+  background-image: radial-gradient(circle, transparent 0.8px, rgba(5, 2, 8, 0.45) 1.1px);
+  background-size: 2px 2px;
+}
+
+/* Léger halo des LED : aide la lecture à travers la trame */
+.girouette-text {
+  text-shadow: 0 0 8px rgba(243, 195, 24, 0.35);
+}
+
+@media (min-width: 640px) {
+  .girouette::after {
+    background-image: radial-gradient(circle, transparent 0.9px, rgba(5, 2, 8, 0.7) 1.3px);
+    background-size: 3px 3px;
+  }
 }
 
 .girouette-code {

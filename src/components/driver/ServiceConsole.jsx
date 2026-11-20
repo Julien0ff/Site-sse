@@ -26,13 +26,16 @@ export default function ServiceConsole({ svc, busData, handleFinishService, acti
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
         <div className="girouette flex items-stretch flex-1 min-w-0" aria-label={`Girouette : ${activeLine.name} ${(selectedTrip?.isLimitedService ? selectedTrip.destinationStop : selectedDirection.destination)}`}>
           <span
-            className="girouette-code flex items-center px-3 sm:px-4 text-2xl sm:text-3xl shrink-0"
+            className="girouette-code flex items-center justify-center px-3 sm:px-4 text-[28px] sm:text-3xl shrink-0 min-w-[3.25rem]"
             style={{ backgroundColor: activeLine.color || '#F3C318', color: activeLine.textColor || textOnLineColor(activeLine.color || '#F3C318') }}
           >
             {activeLine.name}
           </span>
-          <span className="flex items-center px-3 sm:px-4 py-2.5 text-xl sm:text-3xl truncate">
-            {(selectedTrip?.isLimitedService ? selectedTrip.destinationStop : selectedDirection.destination)}
+          {/* Mobile : texte plus grand, sur 2 lignes si besoin ; PC : une ligne */}
+          <span className="flex items-center min-w-0 px-3 sm:px-4 py-2 sm:py-2.5">
+            <span className="girouette-text block min-w-0 text-[26px] leading-[1.05] sm:text-3xl sm:leading-normal line-clamp-2 sm:line-clamp-none sm:truncate">
+              {(selectedTrip?.isLimitedService ? selectedTrip.destinationStop : selectedDirection.destination)}
+            </span>
           </span>
         </div>
 

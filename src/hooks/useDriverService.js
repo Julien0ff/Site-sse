@@ -92,8 +92,11 @@ export function useDriverService({ busData, session, patch, effectiveClock, keyb
     return data.sheets[selectedDirection.sheetKey];
   }, [selectedDirection]);
 
-  // Arrêt de prise de service ; vide = terminus d'origine de la fiche
-  const selectedSpawnStop = session.spawnStop || activeSheet?.fullOrigin || '';
+  // Arrêt de prise de service. Une valeur sauvegardée qui n'est plus sur le
+  // parcours joué (ex. ancien terminus de la fiche complète) est ignorée.
+  const selectedSpawnStop = (session.spawnStop && activeSheet?.allStops?.includes(session.spawnStop))
+    ? session.spawnStop
+    : (selectedDirection?.serviceStart || activeSheet?.fullOrigin || '');
 
   // Tous les départs pour cette direction
   const rawTrips = useMemo(() => {

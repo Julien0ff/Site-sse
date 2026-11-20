@@ -332,7 +332,7 @@ export function generateRandomRoulement(busData, options = {}) {
 
   return {
     id: `FDR-${first.lineName}-${Math.floor(100 + Math.random() * 900)}`,
-    version: 3,
+    version: 4, // 4 : courses coupées sur les parcours joués en jeu
     createdAt: new Date().toISOString(),
     durationType,
     serviceMode,
